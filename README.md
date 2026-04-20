@@ -57,31 +57,7 @@ PowerShellcd client
 npm install
 npm run dev
 
-🌐 Local URLs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+🌐 Local URLs :
 
 URLPurposehttp://localhost:3000Home / Landing Pagehttp://localhost:3000/adminAdmin Panelhttp://localhost:3000/table/1Table 1 Customer Orderinghttp://localhost:3000/table/15Table 15 Customer Ordering
 
@@ -100,31 +76,7 @@ VITE_SOCKET_URL=http://192.168.x.x:5000
 Restart both server and client.
 
 
-⚠️ Common Issues & Fixes
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+⚠️ Common Issues & Fixes :
 
 ProblemSolutionmongod: command not foundUse MongoDB Compass or add MongoDB to PATHCannot connect to MongoDBMake sure MongoDB is running before node seed.jsPort 3000 / 5000 already in useChange port in vite.config.js or server/.envBlank screen on customer pageCheck browser console (F12)
 
