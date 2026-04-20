@@ -8,12 +8,13 @@ const cors = require('cors');
 const app = express();
 const server = http.createServer(app);
 
+const CLIENT_URL = process.env.CLIENT_URL || 'https://hotel-pahunchar-digital-ordering-sy.vercel.app';
+
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5173",
-  "http://172.20.10.2:3000",
-  "http://172.20.10.2:5173",
-  process.env.CLIENT_URL || "http://172.20.10.2:3000"
+  CLIENT_URL,
+  "https://hotel-pahunchar-digital-ordering-sy.vercel.app"
 ];
 
 app.use(cors({
@@ -23,19 +24,39 @@ app.use(cors({
 
 app.use(express.json());
 
-const io = new Server(server, {
-  cors: { origin: allowedOrigins, credentials: true }
+// ====================== BASIC TEST ROUTES ======================
+app.get('/', (req, res) => {
+  res.json({ 
+    message: "Hotel Pahunchar Backend is Running!",
+    status: "ok",
+    version: "1.0"
+  });
 });
 
-app.set('io', io);
+app.get('/api', (req, res) => {
+  res.json({ 
+    message: "Hotel Pahunchar API is Running!",
+    status: "ok"
+  });
+});
 
-// Routes...
+// ====================== MAIN ROUTES ======================
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/tables', require('./routes/tables'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/menu', require('./routes/menu'));
 app.use('/api/qr', require('./routes/qr'));
+
+// Socket.IO Setup
+const io = new Server(server, {
+  cors: { 
+    origin: allowedOrigins, 
+    credentials: true 
+  }
+});
+
+app.set('io', io);
 
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
@@ -47,19 +68,19 @@ io.on('connection', (socket) => {
 
   socket.on('join-table', ({ tableNumber, sessionId }) => {
     socket.join(`table-${tableNumber}`);
-    console.log(`📱 Table ${tableNumber} joined (Socket ID: ${socket.id})`);
+    console.log(`📱 Table ${tableNumber} joined`);
   });
 
   socket.on('send-message-to-table', ({ tableNumber, message, type, waitTime }) => {
-    console.log(`📤 Sending message to Table ${tableNumber}: ${message}`);
     io.to(`table-${tableNumber}`).emit('message-from-admin', { 
       message, type, waitTime, timestamp: new Date() 
     });
   });
 
   socket.on('send-message-to-admin', ({ tableNumber, message, sessionId }) => {
-    console.log(`📥 Message from Table ${tableNumber}`);
-    io.to('admin-room').emit('message-from-customer', { tableNumber, message, sessionId, timestamp: new Date() });
+    io.to('admin-room').emit('message-from-customer', { 
+      tableNumber, message, sessionId, timestamp: new Date() 
+    });
   });
 
   socket.on('disconnect', () => {
@@ -67,11 +88,14 @@ io.on('connection', (socket) => {
   });
 });
 
+// MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected'))
-  .catch(err => console.error('❌ MongoDB error:', err));
+  .catch(err => console.error('❌ MongoDB error:', err.message));
 
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, () => {
-  console.log(`✅ Server running on http://172.20.10.2:${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Frontend URL: ${CLIENT_URL}`);
 });
