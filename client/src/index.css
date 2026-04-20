@@ -1,0 +1,78 @@
+/* src/index.css */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --red:       #7b1111;
+  --red2:      #a01515;
+  --red3:      #5f0d0d;
+  --gold:      #c8a520;
+  --goldbr:    #e8c030;
+  --goldlt:    #f5d84a;
+  --bg:        #0d0d0d;
+  --bg2:       #181818;
+  --bg3:       #222222;
+  --bg4:       #2a2a2a;
+  --border:    #333333;
+  --text:      #ffffff;
+  --muted:     #999999;
+  --green:     #16a34a;
+  --blue:      #2563eb;
+  --orange:    #d97706;
+  --danger:    #dc2626;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: 'Mukta', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* Select */
+select option { background: #1c1c1c; color: #fff; }
+
+/* Input placeholder */
+input::placeholder,
+textarea::placeholder { color: #666; }
+
+/* Transitions */
+button { transition: opacity 0.15s, transform 0.1s; }
+button:active { transform: scale(0.97); }
+
+/* Focus ring */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--goldbr);
+  outline-offset: 2px;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.animate-fade-in { animation: fadeIn 0.25s ease both; }
+.animate-pulse    { animation: pulse 1.5s infinite; }
+.animate-spin     { animation: spin 1.5s linear infinite; }
