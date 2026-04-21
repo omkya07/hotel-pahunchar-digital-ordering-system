@@ -1034,8 +1034,8 @@ export function AdminApp() {
               }
             </div>
           )}
-          
-          {/* LIVE ORDERS - Chat opens below orders only (No global merged chat) */}
+
+          {/* LIVE ORDERS - Chat opens below orders only (Clean + No Overlap) */}
           {adminTab === 'live' && (
             <div style={{ padding: '16px 12px', paddingBottom: 140 }}>
               <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 17, marginBottom: 16 }}>
@@ -1073,7 +1073,7 @@ export function AdminApp() {
                         border: '1px solid rgba(200,165,32,.25)'
                       }}
                     >
-                      {/* Header */}
+                      {/* Header - Only Red Chat Button */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                         <div>
                           <span style={{ color: '#e8c030', fontWeight: 700, fontSize: 17 }}>
@@ -1129,28 +1129,43 @@ export function AdminApp() {
                         </div>
                       )}
 
-                      {/* Chat Box - Opens BELOW the orders of this table only */}
+                      {/* Chat Box - Opens BELOW orders with proper spacing */}
                       <AnimatePresence>
                         {isChatOpen && (
                           <motion.div 
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            style={{ marginTop: 16, borderTop: '1px solid #333', paddingTop: 16 }}
+                            style={{ 
+                              marginTop: 20, 
+                              borderTop: '2px solid #444', 
+                              paddingTop: 20,
+                              background: '#161616',
+                              borderRadius: 12,
+                              padding: 16
+                            }}
                           >
-                            <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 10 }}>💬 संभाषण</div>
+                            <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 12, fontSize: 16 }}>💬 संभाषण</div>
                             
-                            <div style={{ maxHeight: '280px', overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ 
+                              maxHeight: '280px', 
+                              overflowY: 'auto', 
+                              marginBottom: 16, 
+                              display: 'flex', 
+                              flexDirection: 'column', 
+                              gap: 10 
+                            }}>
                               {(session.messages || []).map((msg, i) => (
                                 <div key={i} style={{
                                   ...S.chatBubble,
                                   alignSelf: msg.sender === 'admin' ? 'flex-end' : 'flex-start',
-                                  background: msg.sender === 'admin' ? 'rgba(123,17,17,.65)' : 'rgba(34,197,94,.12)'
+                                  background: msg.sender === 'admin' ? 'rgba(123,17,17,.75)' : 'rgba(34,197,94,.15)',
+                                  padding: '12px 14px'
                                 }}>
                                   <div style={S.chatSender}>
                                     {msg.sender === 'admin' ? '👨‍💼 Admin' : `🙋 ${session.customerName}`}
                                   </div>
-                                  <div>{msg.text}</div>
+                                  <div style={{ marginTop: 4 }}>{msg.text}</div>
                                   <div style={S.chatTime}>
                                     {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                                   </div>
@@ -1414,7 +1429,6 @@ function AdminOrderCard({ order, lang, t, onSelectSession, onUpdateItem, onWaitV
             {[2,3,5].map(m=>(
               <button key={m} style={{padding:'5px 10px',background:'#d97706',color:'#fff',border:'none',borderRadius:7,cursor:'pointer',fontSize:12,fontWeight:700}} onClick={()=>onWaitVoice(m)}>🔊 {m}min</button>
             ))}
-            <button style={{padding:'5px 10px',background:'#2563eb',color:'#fff',border:'none',borderRadius:7,cursor:'pointer',fontSize:12,fontWeight:700}} onClick={onSelectSession}>💬 {t('Chat','चॅट')}</button>
           </div>
         </>
       )}
