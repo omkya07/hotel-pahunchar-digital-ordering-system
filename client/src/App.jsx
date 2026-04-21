@@ -197,6 +197,39 @@ export function CustomerApp({ tableNumber }) {
       speak(msg.text, lang)
     })
 
+    // Add this inside the socket.on('connect') or after other listeners
+    socket.on('item-status-update', ({ orderId, itemIndex, status, isBasic, itemName }) => {
+      console.log(`📦 Item status updated: ${itemName} → ${status}`);
+
+      if (isBasic) {
+        setBasicOrders(prev => prev.map(o => {
+          if (o._id !== orderId) return o;
+          const items = [...o.items];
+          if (items[itemIndex]) {
+            items[itemIndex] = { ...items[itemIndex], status };
+          }
+          return { ...o, items };
+        }));
+      } else {
+        setOrders(prev => prev.map(o => {
+          if (o._id !== orderId) return o;
+          const items = [...o.items];
+          if (items[itemIndex]) {
+            items[itemIndex] = { ...items[itemIndex], status };
+          }
+          return { ...o, items };
+        }));
+      }
+
+      // Voice notification to customer when item is "sent"
+      if (status === 'sent') {
+        speak(
+          t(`${itemName || 'आपला आयटम'} पाठवला गेला आहे`, `${itemName || 'Your item'} has been sent`),
+          lang
+        );
+      }
+    });
+
     socket.on('session-confirmed', ({ session: s, message }) => {
       setSession(s)
       setPhase('active')
@@ -899,11 +932,55 @@ export function AdminApp() {
   }
 
   async function updateItemStatus(orderId, idx, status, isBasic) {
-    const url = isBasic ? `/orders/basic/${orderId}/item/${idx}/status` : `/orders/${orderId}/item/${idx}/status`
-    await apiCall(url,'PUT',{status})
-    const up = prev=>prev.map(o => o._id!==orderId ? o : {...o, items: o.items.map((item,i) => i===idx ? {...item,status} : item)})
-    isBasic ? setBasicOrders(up) : setOrders(up)
+  const url = isBasic 
+    ? `/orders/basic/${orderId}/item/${idx}/status` 
+    : `/orders/${orderId}/item/${idx}/status`;
+
+  try {
+    await apiCall(url, 'PUT', { status });
+
+    // Update local admin state
+    const up = prev => prev.map(o => 
+      o._id !== orderId ? o : {
+        ...o, 
+        items: o.items.map((item, i) => i === idx ? { ...item, status } : item)
+      }
+    );
+
+    if (isBasic) {
+      setBasicOrders(up);
+    } else {
+      setOrders(up);
+    }
+
+    // 🔥 IMPORTANT: Notify the specific customer table in real-time
+    const order = isBasic 
+      ? basicOrders.find(o => o._id === orderId)
+      : orders.find(o => o._id === orderId);
+
+    if (order && order.tableNumber) {
+      const itemName = order.items[idx]?.nameMarathi || order.items[idx]?.name || 'Item';
+
+      socketRef.current?.emit('item-status-update', {
+        tableNumber: order.tableNumber,
+        orderId,
+        itemIndex: idx,
+        status,
+        isBasic,
+        itemName
+      });
+
+      // Optional: Voice feedback for admin
+      if (status === 'sent') {
+        voiceNotify(`टेबल ${order.tableNumber} वर ${itemName} पाठवले`);
+      }
+    }
+
+  } catch (err) {
+    console.error('Failed to update item status:', err);
+    alert('Failed to update status');
   }
+}
 
   async function sendAdminMsg(sessionId, tableNumber) {
     if(!chatMsg.trim()) return
