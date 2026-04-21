@@ -449,7 +449,12 @@ async function leaveTable() {
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           <button style={S.langBtn} onClick={()=>setLang(l=>l==='mr'?'en':'mr')}>{lang==='mr'?'English':'मराठी'}</button>
-          <button style={S.leaveBtn} onClick={()=>setShowLeave(true)}>🚪</button>
+          <button 
+              style={S.leaveBtn} 
+              onClick={()=>setShowLeave(true)}
+            >
+              🚪 {t('सोडा', 'Leave')}
+            </button>
         </div>
       </div>
 
@@ -580,12 +585,12 @@ async function leaveTable() {
     </div>
   )
 }
-
 // ── MenuCard ──────────────────────────────────────────────
 function MenuCard({ item, lang, onAdd, t }) {
-  const [qty, setQty] = useState(1)
-  const [exp, setExp] = useState(false)
-  const isVeg = item.id.includes('shaka')||item.id.includes('masoor')
+  const [qty, setQty] = useState(1);
+  const [exp, setExp] = useState(false);
+  const isVeg = item.id.includes('shaka') || item.id.includes('masoor');
+
   return (
     <motion.div whileHover={{scale:1.005}} style={S.menuCard}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
@@ -598,19 +603,30 @@ function MenuCard({ item, lang, onAdd, t }) {
         </div>
         <div style={{color:'#e8c030',fontWeight:800,fontSize:19,background:'rgba(200,165,32,.1)',padding:'4px 10px',borderRadius:8}}>₹{item.price}</div>
       </div>
-      <span style={{display:'inline-block',fontSize:11,padding:'2px 8px',borderRadius:10,background:isVeg?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)',color:isVeg?'#22c55e':'#ef4444',marginBottom:8}}>{isVeg?'🟢 Veg':'🔴 Non-Veg'}</span>
+
+      <span style={{display:'inline-block',fontSize:11,padding:'2px 8px',borderRadius:10,background:isVeg?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)',color:isVeg?'#22c55e':'#ef4444',marginBottom:8}}>
+        {isVeg ? '🟢 Veg' : '🔴 Non-Veg'}
+      </span>
+
       <button style={S.incBtn} onClick={()=>setExp(!exp)}>{t('यात आहे','Includes')} {exp?'▲':'▼'}</button>
-      {exp&&<div style={{color:'#888',fontSize:12,lineHeight:1.6,background:'rgba(255,255,255,.04)',borderRadius:8,padding:'8px 12px',marginBottom:8}}>{item.inc}</div>}
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
+      {exp && <div style={{color:'#888',fontSize:12,lineHeight:1.6,background:'rgba(255,255,255,.04)',borderRadius:8,padding:'8px 12px',marginBottom:8}}>{item.inc}</div>}
+
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12}}>
         <div style={S.qtyCtrl}>
-          <button style={S.qtyBtn} onClick={()=>setQty(q=>Math.max(1,q-1))}>−</button>
+          <button style={S.qtyBtn} onClick={()=>setQty(q => Math.max(1, q-1))}>-</button>
           <span style={S.qtyNum}>{qty}</span>
-          <button style={S.qtyBtn} onClick={()=>setQty(q=>q+1)}>+</button>
+          <button style={S.qtyBtn} onClick={()=>setQty(q => q+1)}>+</button>
         </div>
-        <motion.button whileTap={{scale:0.9}} style={S.addBtn} onClick={()=>{onAdd(item,qty);setQty(1)}}>+ {t('टाका','Add')}</motion.button>
+        <motion.button 
+          whileTap={{scale:0.9}} 
+          style={S.addBtn} 
+          onClick={() => { onAdd(item, qty); setQty(1); }}
+        >
+          + {t('टाका','Add')}
+        </motion.button>
       </div>
     </motion.div>
-  )
+  );
 }
 
 // ── OrderCard ─────────────────────────────────────────────
@@ -1000,17 +1016,18 @@ export function AdminApp() {
               }
             </div>
           )}
-          {/* LIVE ORDERS - Only Active + Basic grouped under table */}
+
+          {/* LIVE ORDERS - Mobile Friendly */}
           {adminTab === 'live' && (
             <div style={{ paddingBottom: 20 }}>
               <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 16, marginBottom: 16 }}>
-                {t('Active Live Orders', 'सक्रिय ऑर्डर')}
+                {t('Active Live Orders', 'सक्रिय लाइव ऑर्डर')}
               </div>
 
               {activeSessions.length === 0 ? (
                 <div style={S.empty}>
                   <div style={{ fontSize: 48 }}>🟢</div>
-                  <p style={{ marginTop: 12 }}>{t('No active orders', 'सध्या कोणतीही सक्रिय ऑर्डर नाही')}</p>
+                  <p>{t('No active orders right now', 'सध्या कोणतीही सक्रिय ऑर्डर नाही')}</p>
                 </div>
               ) : (
                 activeSessions.map(session => {
@@ -1027,30 +1044,25 @@ export function AdminApp() {
                   return (
                     <motion.div 
                       key={session._id}
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      style={{
-                        background: '#1c1c1c',
-                        borderRadius: 16,
-                        padding: 16,
-                        marginBottom: 18,
-                        border: '1px solid rgba(200,165,32,0.25)'
+                      style={{ 
+                        background: '#1c1c1c', 
+                        borderRadius: 16, 
+                        padding: 16, 
+                        marginBottom: 20,
+                        border: '1px solid rgba(200,165,32,.25)'
                       }}
                     >
-                      {/* Table & Customer Info */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                         <div>
-                          <div style={{ fontSize: 18, fontWeight: 700, color: '#e8c030' }}>
-                            टेबल {session.tableNumber} • {session.customerName}
-                          </div>
-                          <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
-                            {new Date(session.startTime || session.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
+                          <span style={{ color: '#e8c030', fontWeight: 700, fontSize: 17 }}>
+                            टेबल {session.tableNumber} — {session.customerName}
+                          </span>
                         </div>
-
                         <button 
                           onClick={() => setSelected(session)}
-                          style={{ padding: '8px 16px', background: '#7b1111', color: '#e8c030', border: 'none', borderRadius: 10, fontWeight: 600 }}
+                          style={{ padding: '8px 14px', background: '#7b1111', color: '#e8c030', border: 'none', borderRadius: 10, fontSize: 14 }}
                         >
                           💬 चॅट
                         </button>
@@ -1059,7 +1071,7 @@ export function AdminApp() {
                       {/* Main Orders */}
                       {sessionMainOrders.length > 0 && (
                         <div style={{ marginBottom: 16 }}>
-                          <div style={{ color: '#fbbf24', fontWeight: 600, fontSize: 14, marginBottom: 8 }}>मुख्य ऑर्डर</div>
+                          <div style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 8 }}>मुख्य ऑर्डर</div>
                           {sessionMainOrders.map(order => (
                             <AdminOrderCard 
                               key={order._id}
@@ -1073,10 +1085,10 @@ export function AdminApp() {
                         </div>
                       )}
 
-                      {/* Basic Items grouped under same table */}
+                      {/* Basic Items */}
                       {sessionBasicOrders.length > 0 && (
                         <div>
-                          <div style={{ color: '#4ade80', fontWeight: 600, fontSize: 14, marginBottom: 8 }}>इतर वस्तू (Basic Items)</div>
+                          <div style={{ color: '#4ade80', fontWeight: 600, marginBottom: 8 }}>इतर वस्तू</div>
                           {sessionBasicOrders.map(order => (
                             <AdminBasicCard 
                               key={order._id}
@@ -1094,6 +1106,7 @@ export function AdminApp() {
               )}
             </div>
           )}
+
           {/* QR CODES */}
           {adminTab==='qr' && (
             <div>
@@ -1369,7 +1382,7 @@ const S = {
   primaryBtn:{ width:'100%', padding:16, borderRadius:14, background:'linear-gradient(135deg,#7b1111,#a01515)', color:'#e8c030', fontWeight:800, fontSize:16, border:'1px solid rgba(200,165,32,.4)', cursor:'pointer' },
   ghostBtn:  { padding:'9px 14px', background:'none', border:'1px solid #444', color:'#888', borderRadius:9, cursor:'pointer', fontSize:13, fontWeight:600 },
   langBtn:   { background:'rgba(255,255,255,.08)', border:'1px solid rgba(255,255,255,.2)', borderRadius:16, padding:'5px 12px', color:'#e8c030', cursor:'pointer', fontSize:12, fontWeight:600 },
-  leaveBtn:  { background:'rgba(239,68,68,.15)', border:'1px solid #ef444466', borderRadius:10, padding:'7px 12px', color:'#ef4444', cursor:'pointer', fontSize:14, fontWeight:700 },
+  leaveBtn:  { background:'rgba(239,68,68,.15)', border:'1px solid #ef444466', borderRadius:12, padding:'10px 16px', color:'#ef4444', cursor:'pointer', fontSize:15, fontWeight:700, display: 'flex', alignItems: 'center', gap: 6},
   app:       { minHeight:'100vh', background:'#0d0d0d', display:'flex', flexDirection:'column', color:'#fff', maxWidth:500, margin:'0 auto', paddingBottom: 'env(safe-area-inset-bottom)',fontSize: '15px' },
   header:    { background:'linear-gradient(135deg,#1a0000,#3b0000)', padding:'13px 18px', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid rgba(200,165,32,.3)', flexShrink:0 },
   headerTitle:{ color:'#e8c030', fontWeight:800, fontSize:17, fontFamily:'serif' },
@@ -1383,28 +1396,28 @@ const S = {
   catActive: { background:'rgba(123,17,17,.8)', color:'#e8c030' },
   menuCard:  { background:'linear-gradient(145deg,#1c1c1c,#242424)', borderRadius:15, padding:14, border:'1px solid #333', marginBottom:12 },
   incBtn:    { background:'none', border:'1px solid #444', color:'#888', borderRadius:8, padding:'3px 10px', cursor:'pointer', fontSize:12, marginBottom:6 },
-  qtyCtrl:   { display:'flex', alignItems:'center', gap:10 },
-  qtyBtn:    { width:30, height:30, borderRadius:7, border:'1px solid #555', background:'#222', color:'#fff', cursor:'pointer', fontWeight:700, fontSize:15 },
+  qtyCtrl:   { display:'flex', alignItems:'center', gap:12, background: 'rgba(255,255,255,0.08)', padding: '6px 10px',borderRadius: 10 },
+  qtyBtn:    { width:36, height:36, borderRadius:8, border:'1px solid #555', background:'#222', color:'#fff', cursor:'pointer', fontWeight:700, fontSize:18 },
   qtyNum:    { color:'#e8c030', fontWeight:700, fontSize:16, minWidth:22, textAlign:'center' },
-  addBtn:    { padding:'8px 14px', background:'linear-gradient(135deg,#7b1111,#a01515)', color:'#e8c030', border:'1px solid rgba(200,165,32,.3)', borderRadius:9, cursor:'pointer', fontWeight:700, fontSize:13 },
-  ccartBar: { 
-  position: 'fixed',
-  bottom: 0,
-  left: '50%',
-  transform: 'translateX(-50%)',
-  width: '100%',
-  maxWidth: 500,
-  background: 'linear-gradient(135deg,#7b1111,#a01515)',
-  padding: '14px 18px',
-  paddingBottom: 'max(14px, env(safe-area-inset-bottom))',   // ← Important for iPhone
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  borderTop: '1px solid rgba(200,165,32,.4)',
-  color: '#fff',
-  fontWeight: 600,
+  addBtn:    { padding:'10px 18px', background:'linear-gradient(135deg,#7b1111,#a01515)', color:'#e8c030', border:'1px solid rgba(200,165,32,.3)', borderRadius:10, cursor:'pointer', fontWeight:700, fontSize:15 },
+  cartBar: { 
+  position: 'fixed', 
+  bottom: 0, 
+  left: '50%', 
+  transform: 'translateX(-50%)', 
+  width: '100%', 
+  maxWidth: 500, 
+  background: 'linear-gradient(135deg,#7b1111,#a01515)', 
+  padding: '16px 18px', 
+  paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+  display: 'flex', 
+  justifyContent: 'space-between', 
+  alignItems: 'center', 
+  borderTop: '1px solid rgba(200,165,32,.4)', 
+  color: '#fff', 
+  fontWeight: 600, 
   zIndex: 100,
-  boxShadow: '0 -4px 20px rgba(0,0,0,0.6)'   // Optional: nice shadow
+  boxShadow: '0 -4px 20px rgba(0,0,0,0.6)'
 },
   orderBtn:  { background:'#e8c030', color:'#1a0000', padding:'10px 20px', borderRadius:11, border:'none', fontWeight:800, cursor:'pointer', fontSize:14 },
   orderCard: { background:'#1c1c1c', borderRadius:16, padding:16, border:'1px solid #333', marginBottom:16 , fontSize: 15},
