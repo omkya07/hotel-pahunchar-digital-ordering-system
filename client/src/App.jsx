@@ -1082,10 +1082,10 @@ export function AdminApp() {
                           </span>
                         </div>
                         <button 
-                          onClick={() => setSelected(isChatOpen ? null : session)}
+                          onClick={() => setSelected(selected?._id === session._id ? null : session)}
                           style={{ 
                             padding: '10px 18px', 
-                            background: isChatOpen ? '#ef4444' : '#7b1111', 
+                            background: selected?._id === session._id ? '#ef4444' : '#7b1111', 
                             color: '#e8c030', 
                             border: 'none', 
                             borderRadius: 10, 
@@ -1093,7 +1093,7 @@ export function AdminApp() {
                             fontWeight: 600 
                           }}
                         >
-                          {isChatOpen ? '✕ बंद करा' : '💬 चॅट'}
+                          {selected?._id === session._id ? '✕ बंद करा' : '💬 चॅट'}
                         </button>
                       </div>
 
@@ -1517,7 +1517,13 @@ const S = {
   basicCard: { background:'#1c1c1c', borderRadius:11, padding:'11px 8px', border:'1px solid #333', display:'flex', flexDirection:'column', gap:7, alignItems:'center' },
   chatWrap:  { display:'flex', flexDirection:'column', height:'calc(100vh - 200px)' },
   chatMsgs:  { flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:8, paddingBottom:8 },
-  chatBubble:{ maxWidth:'82%', padding:'10px 13px', borderRadius:13, wordBreak:'break-word' },
+  chatBubble: { 
+  maxWidth: '82%', 
+  padding: '10px 13px', 
+  borderRadius: 13, 
+  wordBreak: 'break-word',
+  fontSize: 14 
+},
   bubbleCustomer:{ alignSelf:'flex-end', background:'rgba(123,17,17,.65)', border:'1px solid rgba(200,165,32,.2)' },
   bubbleAdmin:   { alignSelf:'flex-start', background:'rgba(34,197,94,.12)', border:'1px solid rgba(34,197,94,.25)' },
   chatSender:{ fontSize:11, color:'#888', marginBottom:3, fontWeight:600 },
