@@ -160,13 +160,7 @@ export function CustomerApp({ tableNumber }) {
   const socketRef = useRef(null)
   const msgEndRef = useRef(null)
 
-  // ── Persist to localStorage ───────────────────────────
-  useEffect(() => {
-    if (phase === 'ended') { localStorage.removeItem(SESSION_KEY(tableNumber)); return }
-    localStorage.setItem(SESSION_KEY(tableNumber), JSON.stringify({ phase, customer, session, orders, basicOrders, messages }))
-  }, [phase, customer, session, orders, basicOrders, messages])
-
-  // ── Socket setup (Updated for Mobile Chat) ──────────────────────────────────────
+    // ── Socket setup (Updated for Mobile Chat + Item Status) ─────────────────────
   useEffect(() => {
     const io = window.io
     if (!io) return console.error("Socket.IO not loaded")
@@ -193,42 +187,8 @@ export function CustomerApp({ tableNumber }) {
       }
       setMessages(prev => [...prev, msg])
       showNotif(msg.text, data.type || 'info', data.waitTime)
-      // Improved voice call
       speak(msg.text, lang)
     })
-
-    // Add this inside the socket.on('connect') or after other listeners
-    socket.on('item-status-update', ({ orderId, itemIndex, status, isBasic, itemName }) => {
-      console.log(`📦 Item status updated: ${itemName} → ${status}`);
-
-      if (isBasic) {
-        setBasicOrders(prev => prev.map(o => {
-          if (o._id !== orderId) return o;
-          const items = [...o.items];
-          if (items[itemIndex]) {
-            items[itemIndex] = { ...items[itemIndex], status };
-          }
-          return { ...o, items };
-        }));
-      } else {
-        setOrders(prev => prev.map(o => {
-          if (o._id !== orderId) return o;
-          const items = [...o.items];
-          if (items[itemIndex]) {
-            items[itemIndex] = { ...items[itemIndex], status };
-          }
-          return { ...o, items };
-        }));
-      }
-
-      // Voice notification to customer when item is "sent"
-      if (status === 'sent') {
-        speak(
-          t(`${itemName || 'आपला आयटम'} पाठवला गेला आहे`, `${itemName || 'Your item'} has been sent`),
-          lang
-        );
-      }
-    });
 
     socket.on('session-confirmed', ({ session: s, message }) => {
       setSession(s)
@@ -249,6 +209,7 @@ export function CustomerApp({ tableNumber }) {
       speak('धन्यवाद! पुन्हा या.', 'mr')
     })
 
+    // Main order item status update (old one - keeping for backward compatibility)
     socket.on('order-item-update', ({ orderId, itemIndex, status }) => {
       setOrders(prev => prev.map(o => {
         if (o._id !== orderId) return o
@@ -258,6 +219,7 @@ export function CustomerApp({ tableNumber }) {
       }))
     })
 
+    // Basic order item status update
     socket.on('basic-order-item-update', ({ orderId, itemIndex, status }) => {
       setBasicOrders(prev => prev.map(o => {
         if (o._id !== orderId) return o
@@ -267,23 +229,43 @@ export function CustomerApp({ tableNumber }) {
       }))
     })
 
+    // 🔥 NEW: Real-time item status update from Admin (Sent / Received etc.)
+    socket.on('item-status-update', ({ orderId, itemIndex, status, isBasic, itemName }) => {
+      console.log(`📦 Customer received item update: ${itemName || 'Item'} → ${status} (isBasic: ${isBasic})`)
+
+      if (isBasic) {
+        setBasicOrders(prev => prev.map(o => {
+          if (o._id !== orderId) return o
+          const items = [...o.items]
+          if (items[itemIndex]) {
+            items[itemIndex] = { ...items[itemIndex], status }
+          }
+          return { ...o, items }
+        }))
+      } else {
+        setOrders(prev => prev.map(o => {
+          if (o._id !== orderId) return o
+          const items = [...o.items]
+          if (items[itemIndex]) {
+            items[itemIndex] = { ...items[itemIndex], status }
+          }
+          return { ...o, items }
+        }))
+      }
+
+      // Voice notification when item is sent
+      if (status === 'sent') {
+        const name = itemName || t('आपला आयटम', 'Your item')
+        speak(
+          t(`${name} पाठवला गेला आहे`, `${name} has been sent`),
+          lang
+        )
+      }
+    })
+
     return () => socket.disconnect()
-  }, [tableNumber, session?._id, lang])
-  useEffect(() => {
-    if (phase === 'active' && session?._id) {
-      apiCall(`/orders/session/${session._id}`)
-        .then(data => { setOrders(data.orders || []); setBasicOrders(data.basicOrders || []) })
-        .catch(() => {})
-    }
-  }, [session?._id])
-
-  useEffect(() => { msgEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
-
-  function showNotif(text, type = 'info', waitTime = null) {
-    setAdminNotif({ text, type, waitTime })
-    if (type !== 'wait') setTimeout(() => setAdminNotif(null), 6000)
-  }
-
+  }, [tableNumber, session?._id, lang, t])   // Added t as dependency
+  
   // ── JOIN ──────────────────────────────────────────────
   async function sendJoinRequest() {
     if (!customer.name.trim()) { alert(t('कृपया नाव लिहा', 'Please enter name')); return }
@@ -939,27 +921,24 @@ export function AdminApp() {
   try {
     await apiCall(url, 'PUT', { status });
 
-    // Update local admin state
-    const up = prev => prev.map(o => 
+    // Update Admin UI immediately
+    const updater = prev => prev.map(o => 
       o._id !== orderId ? o : {
         ...o, 
         items: o.items.map((item, i) => i === idx ? { ...item, status } : item)
       }
     );
 
-    if (isBasic) {
-      setBasicOrders(up);
-    } else {
-      setOrders(up);
-    }
+    if (isBasic) setBasicOrders(updater);
+    else setOrders(updater);
 
-    // 🔥 IMPORTANT: Notify the specific customer table in real-time
-    const order = isBasic 
-      ? basicOrders.find(o => o._id === orderId)
-      : orders.find(o => o._id === orderId);
+    // 🔥 Send real-time notification to customer
+    const currentOrders = isBasic ? basicOrders : orders;
+    const order = currentOrders.find(o => o._id === orderId);
 
     if (order && order.tableNumber) {
-      const itemName = order.items[idx]?.nameMarathi || order.items[idx]?.name || 'Item';
+      const item = order.items[idx];
+      const itemName = item?.nameMarathi || item?.name || 'आयटम';
 
       socketRef.current?.emit('item-status-update', {
         tableNumber: order.tableNumber,
@@ -970,15 +949,14 @@ export function AdminApp() {
         itemName
       });
 
-      // Optional: Voice feedback for admin
       if (status === 'sent') {
-        voiceNotify(`टेबल ${order.tableNumber} वर ${itemName} पाठवले`);
+        voiceNotify(`टेबल ${order.tableNumber} - ${itemName} पाठवले`);
       }
     }
 
   } catch (err) {
-    console.error('Failed to update item status:', err);
-    alert('Failed to update status');
+    console.error('Update item status failed:', err);
+    alert('Status update failed');
   }
 }
 
