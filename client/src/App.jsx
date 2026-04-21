@@ -1279,16 +1279,18 @@ export function AdminApp() {
           </div>
         )}
 
-        {/* HISTORY TAB */}
+        {/* HISTORY TAB - List View */}
         {adminTab === 'history' && !historyDetail && (
           <div>
-            <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:10}}>{t('Session History','सत्र इतिहास')}</div>
+            <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:10}}>
+              {t('Session History','सत्र इतिहास')}
+            </div>
             
             <input 
-              style={{...S.inp,marginBottom:12}} 
+              style={{...S.inp, marginBottom:12}} 
               placeholder={t('Search name, table...','नाव, टेबल शोधा...')} 
               value={histSearch} 
-              onChange={e=>setHistSearch(e.target.value)}
+              onChange={e => setHistSearch(e.target.value)}
             />
 
             {sessions
@@ -1322,31 +1324,31 @@ export function AdminApp() {
           </div>
         )}
 
-        {/* HISTORY DETAIL VIEW - Full Information */}
+        {/* HISTORY DETAIL VIEW */}
         {adminTab === 'history' && historyDetail && (
-          <div style={{ padding: '16px 12px' }}>
+          <div style={{padding: '16px 12px'}}>
             <button 
               onClick={() => setHistoryDetail(null)}
-              style={{ padding: '10px 16px', background: '#333', color: '#fff', border: 'none', borderRadius: 8, marginBottom: 20 }}
+              style={{padding:'10px 16px', background:'#333', color:'#fff', border:'none', borderRadius:8, marginBottom:20}}
             >
               ← Back to History
             </button>
 
-            <div style={{ color: '#e8c030', fontWeight: 700, fontSize: 18, marginBottom: 16 }}>
+            <div style={{color:'#e8c030', fontWeight:700, fontSize:18, marginBottom:16}}>
               टेबल {historyDetail.tableNumber} — {historyDetail.customerName}
             </div>
 
-            {/* Orders History */}
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 12 }}>ऑर्डर इतिहास</div>
+            {/* Orders */}
+            <div style={{marginBottom:24}}>
+              <div style={{color:'#fbbf24', fontWeight:600, marginBottom:12}}>ऑर्डर इतिहास</div>
               {(historyDetail.orders || []).length > 0 ? (
                 (historyDetail.orders || []).map((order, idx) => (
-                  <div key={idx} style={{ background: '#1c1c1c', borderRadius: 12, padding: 14, marginBottom: 12 }}>
-                    <div style={{ color: '#e8c030', fontWeight: 700, marginBottom: 8 }}>
+                  <div key={idx} style={{background:'#1c1c1c', borderRadius:12, padding:14, marginBottom:12}}>
+                    <div style={{color:'#e8c030', fontWeight:700, marginBottom:8}}>
                       ऑर्डर #{order._id?.slice(-4)} — ₹{order.totalAmount}
                     </div>
                     {order.items && order.items.map((item, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < order.items.length - 1 ? '1px solid #333' : 'none' }}>
+                      <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom: i < order.items.length-1 ? '1px solid #333' : 'none'}}>
                         <span>{item.nameMarathi || item.name} x{item.quantity}</span>
                         <span>₹{item.price * item.quantity}</span>
                       </div>
@@ -1354,14 +1356,14 @@ export function AdminApp() {
                   </div>
                 ))
               ) : (
-                <p style={{ color: '#888' }}>No orders found</p>
+                <p style={{color:'#888'}}>No orders found</p>
               )}
             </div>
 
-            {/* Conversation History */}
+            {/* Chat History */}
             <div>
-              <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 12 }}>💬 संभाषण इतिहास</div>
-              <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{color:'#4ade80', fontWeight:700, marginBottom:12}}>💬 संभाषण इतिहास</div>
+              <div style={{maxHeight:'400px', overflowY:'auto', display:'flex', flexDirection:'column', gap:10}}>
                 {(historyDetail.messages || []).map((msg, i) => (
                   <div key={i} style={{
                     ...S.chatBubble,
@@ -1372,7 +1374,7 @@ export function AdminApp() {
                     <div style={S.chatSender}>
                       {msg.sender === 'admin' ? '👨‍💼 Admin' : `🙋 ${historyDetail.customerName}`}
                     </div>
-                    <div style={{ marginTop: 6 }}>{msg.text}</div>
+                    <div style={{marginTop:6}}>{msg.text}</div>
                     <div style={S.chatTime}>
                       {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                     </div>
