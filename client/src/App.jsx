@@ -160,7 +160,7 @@ export function CustomerApp({ tableNumber }) {
   const socketRef = useRef(null)
   const msgEndRef = useRef(null)
 
-  // ── Socket setup (Fixed for Sent notification) ─────────────────────
+    // ── Socket setup – Fixed for "Sent" notification ─────────────────────
   useEffect(() => {
     const io = window.io
     if (!io) return console.error("Socket.IO not loaded")
@@ -175,28 +175,26 @@ export function CustomerApp({ tableNumber }) {
       }
     })
 
-     // ── Admin wait/voice message → customer ──────────
+    // Admin message
     socket.on('message-from-admin', ({ message, type, waitTime }) => {
       const msg = { sender: 'admin', text: message, type, waitTime, timestamp: new Date() }
       setMessages(prev => [...prev, msg])
-      // Flash + Voice both
-      notify(message, waitTime ? 'wait' : 'info', waitTime || null)
-      // If waitTime: speak extended message
-      if (waitTime) {
-        Voice.speak(`व्यवस्थापकाचा संदेश: ${message}`)
-      }
+      notify(message, waitTime ? 'wait' : 'info', waitTime)
+      speak(message, 'mr')
     })
 
     socket.on('session-confirmed', ({ session: s, message }) => {
       setSession(s)
       setPhase('active')
       socket.emit('join-table', { tableNumber, sessionId: s._id })
-      showNotif(message || t(`टेबल ${tableNumber} वर स्वागत आहे!`, `Welcome to Table ${tableNumber}!`), 'success')
-      speak(message || `स्वागत आहे`, 'mr')
+      const welcomeMsg = message || t(`टेबल ${tableNumber} वर स्वागत आहे!`, `Welcome to Table ${tableNumber}!`)
+      notify(welcomeMsg, 'success')
+      speak(welcomeMsg, 'mr')
     })
 
     socket.on('session-rejected', ({ message }) => {
-      showNotif(message || t('विनंती नाकारली', 'Request rejected'), 'error')
+      const msg = message || t('विनंती नाकारली', 'Request rejected')
+      notify(msg, 'error')
       setTimeout(() => { setPhase('join'); localStorage.removeItem(SESSION_KEY(tableNumber)) }, 3000)
     })
 
@@ -206,24 +204,14 @@ export function CustomerApp({ tableNumber }) {
       speak('धन्यवाद! पुन्हा या.', 'mr')
     })
 
-   // ── Item status update from admin ─────────────────
+    // Old item updates (kept for safety)
     socket.on('order-item-update', ({ orderId, itemIndex, status }) => {
       setOrders(prev => prev.map(o => {
         if (o._id !== orderId) return o
         const items = [...o.items]
         items[itemIndex] = { ...items[itemIndex], status }
-        if (status === 'sent') {
-          const nm = items[itemIndex].nameMarathi || items[itemIndex].name
-          notify(`${nm} पाठवली आहे! मिळाले का?`, 'success')
-        }
         return { ...o, items }
       }))
-    })
-
-    socket.on('session-ended', () => {
-      setPhase('ended')
-      localStorage.removeItem(SESSION_KEY(tableNumber))
-      Voice.speak('धन्यवाद! पुन्हा या.')
     })
 
     socket.on('basic-order-item-update', ({ orderId, itemIndex, status }) => {
@@ -231,16 +219,36 @@ export function CustomerApp({ tableNumber }) {
         if (o._id !== orderId) return o
         const items = [...o.items]
         items[itemIndex] = { ...items[itemIndex], status }
-        if (status === 'sent') {
-          const nm = items[itemIndex].nameMarathi || items[itemIndex].name
-          notify(`${nm} पाठवली आहे!`, 'success')
-        }
         return { ...o, items }
       }))
     })
 
+    // 🔥 FIXED: Real-time "Sent" notification from Admin
+    socket.on('item-status-update', ({ orderId, itemIndex, status, isBasic, itemName }) => {
+      console.log(`📦 Customer received: ${itemName} → ${status}`)
+
+      const updateFn = prev => prev.map(o => {
+        if (o._id !== orderId) return o
+        const items = [...o.items]
+        if (items[itemIndex]) items[itemIndex] = { ...items[itemIndex], status }
+        return { ...o, items }
+      })
+
+      if (isBasic) setBasicOrders(updateFn)
+      else setOrders(updateFn)
+
+      // Voice + Flash when item is sent
+      if (status === 'sent') {
+        const name = itemName || t('आपला आयटम', 'Your item')
+        const text = t(`${name} पाठवला गेला आहे`, `${name} has been sent`)
+        notify(text, 'success')
+        speak(text, lang)
+      }
+    })
+
     return () => socket.disconnect()
-  }, [tableNumber, session?._id, lang])   // Added t as dependency
+  }, [tableNumber, notify, lang, t])
+
 
   // ── JOIN ──────────────────────────────────────────────
   async function sendJoinRequest() {
@@ -889,25 +897,52 @@ export function AdminApp() {
     speak(msg, 'mr')
   }
 
-    async function updateItemStatus(orderId, idx, status, isBasic) {
-    const url = isBasic ? `/orders/basic/${orderId}/item/${idx}/status` : `/orders/${orderId}/item/${idx}/status`
-    await apiCall(url, 'PUT', { status })
-    const up = prev => prev.map(o => {
-      if (o._id !== orderId) return o
-      const items = [...o.items]; items[idx] = { ...items[idx], status }
-      return { ...o, items }
-    })
-    isBasic ? setBasicOrders(up) : setOrders(up)
-    // Notify customer via socket when sent
-    const order = (isBasic ? basicOrders : orders).find(o => o._id === orderId)
-    if (order && status === 'sent') {
-      const itemName = order.items[idx]?.nameMarathi || order.items[idx]?.name
-      const custMsg = `तुमची ${itemName} पाठवली आहे!`
-      socketRef.current?.emit('send-message-to-table', { tableNumber: order.tableNumber, message: custMsg, type: 'info' })
-      adminNotify(`✅ टेबल ${order.tableNumber}: "${itemName}" sent`, 'success', 4000)
+      async function updateItemStatus(orderId, idx, status, isBasic) {
+    const url = isBasic 
+      ? `/orders/basic/${orderId}/item/${idx}/status` 
+      : `/orders/${orderId}/item/${idx}/status`
+
+    try {
+      await apiCall(url, 'PUT', { status })
+
+      // Update admin UI
+      const updater = prev => prev.map(o => 
+        o._id !== orderId ? o : {
+          ...o, 
+          items: o.items.map((item, i) => i === idx ? { ...item, status } : item)
+        }
+      )
+
+      if (isBasic) setBasicOrders(updater)
+      else setOrders(updater)
+
+      // Send real-time update to customer
+      const currentOrders = isBasic ? basicOrders : orders
+      const order = currentOrders.find(o => o._id === orderId)
+
+      if (order && socketRef.current) {
+        const item = order.items[idx]
+        const itemName = item?.nameMarathi || item?.name || 'आयटम'
+
+        socketRef.current.emit('item-status-update', {
+          tableNumber: order.tableNumber,
+          orderId,
+          itemIndex: idx,
+          status,
+          isBasic,
+          itemName
+        })
+
+        if (status === 'sent') {
+          voiceNotify(`टेबल ${order.tableNumber} - ${itemName} पाठवले`)
+        }
+      }
+
+    } catch (err) {
+      console.error('Update item status failed:', err)
+      alert('Failed to update status')
     }
-  } 
-  
+  }  
   // ── LOGIN SCREEN ───────────────────────────────────────
   if (!isLoggedIn) return (
     <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#0a0a0a,#1a0000)',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
