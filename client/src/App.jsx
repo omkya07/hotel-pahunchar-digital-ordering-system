@@ -159,7 +159,6 @@ export function CustomerApp({ tableNumber }) {
   const [remindCooldown, setRemindCooldown] = useState({})
   const socketRef = useRef(null)
   const msgEndRef = useRef(null)
-  const [historyDetail, setHistoryDetail] = useState(null);
 
   // ── Persist to localStorage ───────────────────────────
   useEffect(() => {
@@ -791,6 +790,7 @@ export function AdminApp() {
   const [histSearch, setHistSearch] = useState('')
   const [qrData, setQrData] = useState([])
   const [notifQueue, setNotifQueue] = useState([])
+  const [historyDetail, setHistoryDetail] = useState(null);  
 
   const socketRef = useRef(null)
 
@@ -1285,23 +1285,23 @@ export function AdminApp() {
             <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:10}}>
               {t('Session History','सत्र इतिहास')}
             </div>
-            
-            <input 
-              style={{...S.inp, marginBottom:12}} 
-              placeholder={t('Search name, table...','नाव, टेबल शोधा...')} 
-              value={histSearch} 
+           
+            <input
+              style={{...S.inp, marginBottom:12}}
+              placeholder={t('Search name, table...','नाव, टेबल शोधा...')}
+              value={histSearch}
               onChange={e => setHistSearch(e.target.value)}
             />
 
             {sessions
-              .filter(s => !histSearch || 
-                s.customerName?.toLowerCase().includes(histSearch.toLowerCase()) || 
+              .filter(s => !histSearch ||
+                s.customerName?.toLowerCase().includes(histSearch.toLowerCase()) ||
                 s.tableNumber?.toString().includes(histSearch))
               .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
               .map(session => (
-                <motion.div 
-                  key={session._id} 
-                  whileHover={{scale:1.005}} 
+                <motion.div
+                  key={session._id}
+                  whileHover={{scale:1.005}}
                   style={{background:'#1c1c1c',border:'1px solid #333',borderRadius:12,padding:14,marginBottom:10,cursor:'pointer'}}
                   onClick={() => setHistoryDetail(session)}
                 >
@@ -1327,7 +1327,7 @@ export function AdminApp() {
         {/* HISTORY DETAIL VIEW */}
         {adminTab === 'history' && historyDetail && (
           <div style={{padding: '16px 12px'}}>
-            <button 
+            <button
               onClick={() => setHistoryDetail(null)}
               style={{padding:'10px 16px', background:'#333', color:'#fff', border:'none', borderRadius:8, marginBottom:20}}
             >
@@ -1338,7 +1338,7 @@ export function AdminApp() {
               टेबल {historyDetail.tableNumber} — {historyDetail.customerName}
             </div>
 
-            {/* Orders */}
+            {/* Orders History */}
             <div style={{marginBottom:24}}>
               <div style={{color:'#fbbf24', fontWeight:600, marginBottom:12}}>ऑर्डर इतिहास</div>
               {(historyDetail.orders || []).length > 0 ? (
