@@ -1035,10 +1035,9 @@ export function AdminApp() {
             </div>
           )}
 
-          {/* LIVE ORDERS - Chat opens below orders (Mobile Friendly) */}
-          {/* LIVE ORDERS - Chat opens below orders (No Blue Button) */}
+          {/* LIVE ORDERS - Final Clean Version (No Blue Button, Chat Below Orders) */}
           {adminTab === 'live' && (
-            <div style={{ padding: '16px 12px', paddingBottom: 100 }}>
+            <div style={{ padding: '16px 12px', paddingBottom: 120 }}>
               <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 17, marginBottom: 16 }}>
                 {t('Active Live Orders', 'सक्रिय लाइव ऑर्डर')}
               </div>
@@ -1074,7 +1073,7 @@ export function AdminApp() {
                         border: '1px solid rgba(200,165,32,.25)'
                       }}
                     >
-                      {/* Table Header */}
+                      {/* Header */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                         <div>
                           <span style={{ color: '#e8c030', fontWeight: 700, fontSize: 17 }}>
@@ -1082,10 +1081,10 @@ export function AdminApp() {
                           </span>
                         </div>
                         <button 
-                          onClick={() => setSelected(selected?._id === session._id ? null : session)}
+                          onClick={() => setSelected(isChatOpen ? null : session)}
                           style={{ 
                             padding: '10px 18px', 
-                            background: selected?._id === session._id ? '#ef4444' : '#7b1111', 
+                            background: isChatOpen ? '#ef4444' : '#7b1111', 
                             color: '#e8c030', 
                             border: 'none', 
                             borderRadius: 10, 
@@ -1093,7 +1092,7 @@ export function AdminApp() {
                             fontWeight: 600 
                           }}
                         >
-                          {selected?._id === session._id ? '✕ बंद करा' : '💬 चॅट'}
+                          {isChatOpen ? '✕ बंद करा' : '💬 चॅट'}
                         </button>
                       </div>
 
@@ -1130,7 +1129,7 @@ export function AdminApp() {
                         </div>
                       )}
 
-                      {/* Chat Box - Opens BELOW the orders */}
+                      {/* Chat opens below orders */}
                       <AnimatePresence>
                         {isChatOpen && (
                           <motion.div 
@@ -1141,7 +1140,7 @@ export function AdminApp() {
                           >
                             <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 10 }}>💬 संभाषण</div>
                             
-                            <div style={{ maxHeight: '260px', overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ maxHeight: '240px', overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                               {(session.messages || []).map((msg, i) => (
                                 <div key={i} style={{
                                   ...S.chatBubble,
