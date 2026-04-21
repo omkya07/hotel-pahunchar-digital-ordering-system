@@ -1034,10 +1034,10 @@ export function AdminApp() {
               }
             </div>
           )}
-
-          {/* LIVE ORDERS - Final Clean Version (No Blue Button, Chat Below Orders) */}
+          
+          {/* LIVE ORDERS - Chat opens below orders only (No global merged chat) */}
           {adminTab === 'live' && (
-            <div style={{ padding: '16px 12px', paddingBottom: 120 }}>
+            <div style={{ padding: '16px 12px', paddingBottom: 140 }}>
               <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 17, marginBottom: 16 }}>
                 {t('Active Live Orders', 'सक्रिय लाइव ऑर्डर')}
               </div>
@@ -1129,7 +1129,7 @@ export function AdminApp() {
                         </div>
                       )}
 
-                      {/* Chat opens below orders */}
+                      {/* Chat Box - Opens BELOW the orders of this table only */}
                       <AnimatePresence>
                         {isChatOpen && (
                           <motion.div 
@@ -1140,7 +1140,7 @@ export function AdminApp() {
                           >
                             <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 10 }}>💬 संभाषण</div>
                             
-                            <div style={{ maxHeight: '240px', overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ maxHeight: '280px', overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                               {(session.messages || []).map((msg, i) => (
                                 <div key={i} style={{
                                   ...S.chatBubble,
