@@ -1279,106 +1279,109 @@ export function AdminApp() {
           </div>
         )}
 
-        {/* HISTORY TAB - Click to show full history details */}
-{adminTab==='history' && !historyDetail && (
-  <div>
-    <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:10}}>{t('Session History','सत्र इतिहास')}</div>
-    
-    <input 
-      style={{...S.inp,marginBottom:12}} 
-      placeholder={t('Search name, table...','नाव, टेबल शोधा...')} 
-      value={histSearch} 
-      onChange={e=>setHistSearch(e.target.value)}
-    />
+        {/* HISTORY TAB */}
+        {adminTab === 'history' && !historyDetail && (
+          <div>
+            <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:10}}>{t('Session History','सत्र इतिहास')}</div>
+            
+            <input 
+              style={{...S.inp,marginBottom:12}} 
+              placeholder={t('Search name, table...','नाव, टेबल शोधा...')} 
+              value={histSearch} 
+              onChange={e=>setHistSearch(e.target.value)}
+            />
 
-    {sessions
-      .filter(s => !histSearch || 
-        s.customerName?.toLowerCase().includes(histSearch.toLowerCase()) || 
-        s.tableNumber?.toString().includes(histSearch))
-      .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .map(session => (
-        <motion.div 
-          key={session._id} 
-          whileHover={{scale:1.005}} 
-          style={{background:'#1c1c1c',border:'1px solid #333',borderRadius:12,padding:14,marginBottom:10,cursor:'pointer'}}
-          onClick={() => setHistoryDetail(session)}
-        >
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-            <span style={{color:'#e8c030',fontWeight:700}}>{t('Table','टेबल')} {session.tableNumber}</span>
-            <span style={{padding:'2px 10px',borderRadius:10,fontSize:11,fontWeight:700,
-              background: session.status === 'active' ? 'rgba(34,197,94,.2)' : 'rgba(100,100,100,.2)',
-              color: session.status === 'active' ? '#22c55e' : '#888'}}>
-              {session.status}
-            </span>
-          </div>
-          <div style={{color:'#fff',marginBottom:4}}>👤 {session.customerName}</div>
-          <div style={{color:'#888',fontSize:12}}>📅 {new Date(session.startTime || session.createdAt).toLocaleString()}</div>
-          <div style={{color:'#e8c030',fontSize:13,marginTop:4}}>
-            ₹{session.totalAmount || 0} • {session.orders?.length || 0} orders
-          </div>
-        </motion.div>
-      ))
-    }
-  </div>
-)}
-
-          {/* HISTORY DETAIL VIEW */}
-          {adminTab === 'history' && historyDetail && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <button 
-                  onClick={() => setHistoryDetail(null)}
-                  style={{ padding: '8px 16px', background: '#333', color: '#fff', border: 'none', borderRadius: 8 }}
+            {sessions
+              .filter(s => !histSearch || 
+                s.customerName?.toLowerCase().includes(histSearch.toLowerCase()) || 
+                s.tableNumber?.toString().includes(histSearch))
+              .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map(session => (
+                <motion.div 
+                  key={session._id} 
+                  whileHover={{scale:1.005}} 
+                  style={{background:'#1c1c1c',border:'1px solid #333',borderRadius:12,padding:14,marginBottom:10,cursor:'pointer'}}
+                  onClick={() => setHistoryDetail(session)}
                 >
-                  ← Back to History
-                </button>
-                <div style={{ color: '#e8c030', fontWeight: 700 }}>
-                  टेबल {historyDetail.tableNumber} — {historyDetail.customerName}
-                </div>
-              </div>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                    <span style={{color:'#e8c030',fontWeight:700}}>{t('Table','टेबल')} {session.tableNumber}</span>
+                    <span style={{padding:'2px 10px',borderRadius:10,fontSize:11,fontWeight:700,
+                      background: session.status === 'active' ? 'rgba(34,197,94,.2)' : 'rgba(100,100,100,.2)',
+                      color: session.status === 'active' ? '#22c55e' : '#888'}}>
+                      {session.status}
+                    </span>
+                  </div>
+                  <div style={{color:'#fff',marginBottom:4}}>👤 {session.customerName}</div>
+                  <div style={{color:'#888',fontSize:12}}>📅 {new Date(session.startTime || session.createdAt).toLocaleString()}</div>
+                  <div style={{color:'#e8c030',fontSize:13,marginTop:4}}>
+                    ₹{session.totalAmount || 0} • {session.orders?.length || 0} orders
+                  </div>
+                </motion.div>
+              ))
+            }
+          </div>
+        )}
 
-              {/* Orders */}
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 12 }}>ऑर्डर इतिहास</div>
-                {historyDetail.orders && historyDetail.orders.map((order, idx) => (
+        {/* HISTORY DETAIL VIEW - Full Information */}
+        {adminTab === 'history' && historyDetail && (
+          <div style={{ padding: '16px 12px' }}>
+            <button 
+              onClick={() => setHistoryDetail(null)}
+              style={{ padding: '10px 16px', background: '#333', color: '#fff', border: 'none', borderRadius: 8, marginBottom: 20 }}
+            >
+              ← Back to History
+            </button>
+
+            <div style={{ color: '#e8c030', fontWeight: 700, fontSize: 18, marginBottom: 16 }}>
+              टेबल {historyDetail.tableNumber} — {historyDetail.customerName}
+            </div>
+
+            {/* Orders History */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 12 }}>ऑर्डर इतिहास</div>
+              {(historyDetail.orders || []).length > 0 ? (
+                (historyDetail.orders || []).map((order, idx) => (
                   <div key={idx} style={{ background: '#1c1c1c', borderRadius: 12, padding: 14, marginBottom: 12 }}>
                     <div style={{ color: '#e8c030', fontWeight: 700, marginBottom: 8 }}>
                       ऑर्डर #{order._id?.slice(-4)} — ₹{order.totalAmount}
                     </div>
-                    {order.items.map((item, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #333' }}>
+                    {order.items && order.items.map((item, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < order.items.length - 1 ? '1px solid #333' : 'none' }}>
                         <span>{item.nameMarathi || item.name} x{item.quantity}</span>
                         <span>₹{item.price * item.quantity}</span>
                       </div>
                     ))}
                   </div>
+                ))
+              ) : (
+                <p style={{ color: '#888' }}>No orders found</p>
+              )}
+            </div>
+
+            {/* Conversation History */}
+            <div>
+              <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 12 }}>💬 संभाषण इतिहास</div>
+              <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {(historyDetail.messages || []).map((msg, i) => (
+                  <div key={i} style={{
+                    ...S.chatBubble,
+                    alignSelf: msg.sender === 'admin' ? 'flex-end' : 'flex-start',
+                    background: msg.sender === 'admin' ? 'rgba(123,17,17,.8)' : 'rgba(34,197,94,.2)',
+                    padding: '14px 16px'
+                  }}>
+                    <div style={S.chatSender}>
+                      {msg.sender === 'admin' ? '👨‍💼 Admin' : `🙋 ${historyDetail.customerName}`}
+                    </div>
+                    <div style={{ marginTop: 6 }}>{msg.text}</div>
+                    <div style={S.chatTime}>
+                      {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                    </div>
+                  </div>
                 ))}
               </div>
-
-              {/* Conversation */}
-              <div>
-                <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 12 }}>💬 संभाषण इतिहास</div>
-                <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {(historyDetail.messages || []).map((msg, i) => (
-                    <div key={i} style={{
-                      ...S.chatBubble,
-                      alignSelf: msg.sender === 'admin' ? 'flex-end' : 'flex-start',
-                      background: msg.sender === 'admin' ? 'rgba(123,17,17,.8)' : 'rgba(34,197,94,.2)',
-                      padding: '14px 16px'
-                    }}>
-                      <div style={S.chatSender}>
-                        {msg.sender === 'admin' ? '👨‍💼 Admin' : `🙋 ${historyDetail.customerName}`}
-                      </div>
-                      <div style={{ marginTop: 6 }}>{msg.text}</div>
-                      <div style={S.chatTime}>
-                        {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
-          )}
+          </div>
+        )}
       </div>
     </div>
   )
