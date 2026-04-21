@@ -175,19 +175,16 @@ export function CustomerApp({ tableNumber }) {
       }
     })
 
-    // Admin message
-    socket.on('message-from-admin', (data) => {
-      console.log('📨 Message from Admin:', data)
-      const msg = {
-        sender: 'admin',
-        text: data.message || data.text,
-        type: data.type,
-        waitTime: data.waitTime,
-        timestamp: new Date()
-      }
+     // ── Admin wait/voice message → customer ──────────
+    socket.on('message-from-admin', ({ message, type, waitTime }) => {
+      const msg = { sender: 'admin', text: message, type, waitTime, timestamp: new Date() }
       setMessages(prev => [...prev, msg])
-      showNotif(msg.text, data.type || 'info', data.waitTime)
-      speak(msg.text, lang)
+      // Flash + Voice both
+      notify(message, waitTime ? 'wait' : 'info', waitTime || null)
+      // If waitTime: speak extended message
+      if (waitTime) {
+        Voice.speak(`व्यवस्थापकाचा संदेश: ${message}`)
+      }
     })
 
     socket.on('session-confirmed', ({ session: s, message }) => {
@@ -209,14 +206,24 @@ export function CustomerApp({ tableNumber }) {
       speak('धन्यवाद! पुन्हा या.', 'mr')
     })
 
-    // Old listeners (kept for compatibility)
+   // ── Item status update from admin ─────────────────
     socket.on('order-item-update', ({ orderId, itemIndex, status }) => {
       setOrders(prev => prev.map(o => {
         if (o._id !== orderId) return o
         const items = [...o.items]
         items[itemIndex] = { ...items[itemIndex], status }
+        if (status === 'sent') {
+          const nm = items[itemIndex].nameMarathi || items[itemIndex].name
+          notify(`${nm} पाठवली आहे! मिळाले का?`, 'success')
+        }
         return { ...o, items }
       }))
+    })
+
+    socket.on('session-ended', () => {
+      setPhase('ended')
+      localStorage.removeItem(SESSION_KEY(tableNumber))
+      Voice.speak('धन्यवाद! पुन्हा या.')
     })
 
     socket.on('basic-order-item-update', ({ orderId, itemIndex, status }) => {
@@ -224,6 +231,10 @@ export function CustomerApp({ tableNumber }) {
         if (o._id !== orderId) return o
         const items = [...o.items]
         items[itemIndex] = { ...items[itemIndex], status }
+        if (status === 'sent') {
+          const nm = items[itemIndex].nameMarathi || items[itemIndex].name
+          notify(`${nm} पाठवली आहे!`, 'success')
+        }
         return { ...o, items }
       }))
     })
