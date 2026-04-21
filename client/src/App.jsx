@@ -1033,169 +1033,172 @@ export function AdminApp() {
               }
             </div>
           )}
-
-          {/* LIVE ORDERS - Chat opens below orders only (Clean + No Overlap) */}
-          {adminTab === 'live' && (
-            <div style={{ padding: '16px 12px', paddingBottom: 140 }}>
-              <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 17, marginBottom: 16 }}>
-                {t('Active Live Orders', 'सक्रिय लाइव ऑर्डर')}
-              </div>
-
-              {activeSessions.length === 0 ? (
-                <div style={S.empty}>
-                  <div style={{ fontSize: 48 }}>🟢</div>
-                  <p>{t('No active orders right now', 'सध्या कोणतीही सक्रिय ऑर्डर नाही')}</p>
+            {/* LIVE ORDERS - Final Clean Version (Chat below orders, Full Width, No Blank Space) */}
+            {adminTab === 'live' && (
+              <div style={{ 
+                flex: 1, 
+                overflowY: 'auto', 
+                padding: '16px 12px', 
+                paddingBottom: 180 
+              }}>
+                <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 17, marginBottom: 16 }}>
+                  {t('Active Live Orders', 'सक्रिय लाइव ऑर्डर')}
                 </div>
-              ) : (
-                activeSessions.map(session => {
-                  const sessionMainOrders = orders.filter(o => 
-                    String(o.session) === String(session._id) && o.status !== 'completed'
-                  );
-                  const sessionBasicOrders = basicOrders.filter(o => 
-                    String(o.session) === String(session._id) && o.status !== 'served'
-                  );
 
-                  const isChatOpen = selected?._id === session._id;
+                {activeSessions.length === 0 ? (
+                  <div style={S.empty}>
+                    <div style={{ fontSize: 48 }}>🟢</div>
+                    <p>{t('No active orders right now', 'सध्या कोणतीही सक्रिय ऑर्डर नाही')}</p>
+                  </div>
+                ) : (
+                  activeSessions.map(session => {
+                    const sessionMainOrders = orders.filter(o => 
+                      String(o.session) === String(session._id) && o.status !== 'completed'
+                    );
+                    const sessionBasicOrders = basicOrders.filter(o => 
+                      String(o.session) === String(session._id) && o.status !== 'served'
+                    );
 
-                  if (sessionMainOrders.length === 0 && sessionBasicOrders.length === 0) return null;
+                    const isChatOpen = selected?._id === session._id;
 
-                  return (
-                    <motion.div 
-                      key={session._id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      style={{ 
-                        background: '#1c1c1c', 
-                        borderRadius: 16, 
-                        padding: 16, 
-                        marginBottom: 20,
-                        border: '1px solid rgba(200,165,32,.25)'
-                      }}
-                    >
-                      {/* Header - Only Red Chat Button */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                        <div>
-                          <span style={{ color: '#e8c030', fontWeight: 700, fontSize: 17 }}>
-                            टेबल {session.tableNumber} — {session.customerName}
-                          </span>
-                        </div>
-                        <button 
-                          onClick={() => setSelected(isChatOpen ? null : session)}
-                          style={{ 
-                            padding: '10px 18px', 
-                            background: isChatOpen ? '#ef4444' : '#7b1111', 
-                            color: '#e8c030', 
-                            border: 'none', 
-                            borderRadius: 10, 
-                            fontSize: 14,
-                            fontWeight: 600 
-                          }}
-                        >
-                          {isChatOpen ? '✕ बंद करा' : '💬 चॅट'}
-                        </button>
-                      </div>
+                    if (sessionMainOrders.length === 0 && sessionBasicOrders.length === 0) return null;
 
-                      {/* Main Orders */}
-                      {sessionMainOrders.length > 0 && (
-                        <div style={{ marginBottom: 16 }}>
-                          <div style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 8 }}>मुख्य ऑर्डर</div>
-                          {sessionMainOrders.map(order => (
-                            <AdminOrderCard 
-                              key={order._id}
-                              order={order}
-                              lang={lang}
-                              t={t}
-                              onUpdateItem={(idx, status) => updateItemStatus(order._id, idx, status, false)}
-                              onWaitVoice={(min) => sendWaitVoice(order.tableNumber, session._id, min)}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Basic Items */}
-                      {sessionBasicOrders.length > 0 && (
-                        <div style={{ marginBottom: isChatOpen ? 12 : 0 }}>
-                          <div style={{ color: '#4ade80', fontWeight: 600, marginBottom: 8 }}>इतर वस्तू</div>
-                          {sessionBasicOrders.map(order => (
-                            <AdminBasicCard 
-                              key={order._id}
-                              order={order}
-                              lang={lang}
-                              t={t}
-                              onUpdateItem={(idx, status) => updateItemStatus(order._id, idx, status, true)}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Chat Box - Opens BELOW orders with proper spacing */}
-                      <AnimatePresence>
-                        {isChatOpen && (
-                          <motion.div 
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
+                    return (
+                      <motion.div 
+                        key={session._id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{ 
+                          background: '#1c1c1c', 
+                          borderRadius: 16, 
+                          padding: 16, 
+                          marginBottom: 24,
+                          border: '1px solid rgba(200,165,32,.25)'
+                        }}
+                      >
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                          <div>
+                            <span style={{ color: '#e8c030', fontWeight: 700, fontSize: 17 }}>
+                              टेबल {session.tableNumber} — {session.customerName}
+                            </span>
+                          </div>
+                          <button 
+                            onClick={() => setSelected(isChatOpen ? null : session)}
                             style={{ 
-                              marginTop: 20, 
-                              borderTop: '2px solid #444', 
-                              paddingTop: 20,
-                              background: '#161616',
-                              borderRadius: 12,
-                              padding: 16
+                              padding: '10px 18px', 
+                              background: isChatOpen ? '#ef4444' : '#7b1111', 
+                              color: '#e8c030', 
+                              border: 'none', 
+                              borderRadius: 10, 
+                              fontSize: 14,
+                              fontWeight: 600 
                             }}
                           >
-                            <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 12, fontSize: 16 }}>💬 संभाषण</div>
-                            
-                            <div style={{ 
-                              maxHeight: '280px', 
-                              overflowY: 'auto', 
-                              marginBottom: 16, 
-                              display: 'flex', 
-                              flexDirection: 'column', 
-                              gap: 10 
-                            }}>
-                              {(session.messages || []).map((msg, i) => (
-                                <div key={i} style={{
-                                  ...S.chatBubble,
-                                  alignSelf: msg.sender === 'admin' ? 'flex-end' : 'flex-start',
-                                  background: msg.sender === 'admin' ? 'rgba(123,17,17,.75)' : 'rgba(34,197,94,.15)',
-                                  padding: '12px 14px'
-                                }}>
-                                  <div style={S.chatSender}>
-                                    {msg.sender === 'admin' ? '👨‍💼 Admin' : `🙋 ${session.customerName}`}
-                                  </div>
-                                  <div style={{ marginTop: 4 }}>{msg.text}</div>
-                                  <div style={S.chatTime}>
-                                    {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                            {isChatOpen ? '✕ बंद करा' : '💬 चॅट'}
+                          </button>
+                        </div>
 
-                            <div style={{ display: 'flex', gap: 8 }}>
-                              <input 
-                                style={S.chatInp} 
-                                placeholder="संदेश लिहा..." 
-                                value={chatMsg} 
-                                onChange={e => setChatMsg(e.target.value)}
-                                onKeyPress={e => e.key === 'Enter' && sendAdminMsg(session._id, session.tableNumber)}
+                        {/* Main Orders */}
+                        {sessionMainOrders.length > 0 && (
+                          <div style={{ marginBottom: 20 }}>
+                            <div style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 8 }}>मुख्य ऑर्डर</div>
+                            {sessionMainOrders.map(order => (
+                              <AdminOrderCard 
+                                key={order._id}
+                                order={order}
+                                lang={lang}
+                                t={t}
+                                onUpdateItem={(idx, status) => updateItemStatus(order._id, idx, status, false)}
+                                onWaitVoice={(min) => sendWaitVoice(order.tableNumber, session._id, min)}
                               />
-                              <button 
-                                style={S.sendBtn} 
-                                onClick={() => sendAdminMsg(session._id, session.tableNumber)}
-                              >
-                                पाठवा
-                              </button>
-                            </div>
-                          </motion.div>
+                            ))}
+                          </div>
                         )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })
-              )}
-            </div>
-          )}
+
+                        {/* Basic Items */}
+                        {sessionBasicOrders.length > 0 && (
+                          <div style={{ marginBottom: isChatOpen ? 20 : 0 }}>
+                            <div style={{ color: '#4ade80', fontWeight: 600, marginBottom: 8 }}>इतर वस्तू</div>
+                            {sessionBasicOrders.map(order => (
+                              <AdminBasicCard 
+                                key={order._id}
+                                order={order}
+                                lang={lang}
+                                t={t}
+                                onUpdateItem={(idx, status) => updateItemStatus(order._id, idx, status, true)}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Chat Box - Cleanly Below Orders */}
+                        <AnimatePresence>
+                          {isChatOpen && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 10 }}
+                              style={{ 
+                                marginTop: 24, 
+                                padding: 18, 
+                                background: '#161616', 
+                                borderRadius: 12,
+                                border: '1px solid #555'
+                              }}
+                            >
+                              <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 14, fontSize: 16 }}>💬 संभाषण</div>
+                              
+                              <div style={{ 
+                                maxHeight: '300px', 
+                                overflowY: 'auto', 
+                                marginBottom: 16, 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                gap: 12 
+                              }}>
+                                {(session.messages || []).map((msg, i) => (
+                                  <div key={i} style={{
+                                    ...S.chatBubble,
+                                    alignSelf: msg.sender === 'admin' ? 'flex-end' : 'flex-start',
+                                    background: msg.sender === 'admin' ? 'rgba(123,17,17,.8)' : 'rgba(34,197,94,.2)',
+                                    padding: '14px 16px'
+                                  }}>
+                                    <div style={S.chatSender}>
+                                      {msg.sender === 'admin' ? '👨‍💼 Admin' : `🙋 ${session.customerName}`}
+                                    </div>
+                                    <div style={{ marginTop: 6 }}>{msg.text}</div>
+                                    <div style={S.chatTime}>
+                                      {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <input 
+                                  style={S.chatInp} 
+                                  placeholder="संदेश लिहा..." 
+                                  value={chatMsg} 
+                                  onChange={e => setChatMsg(e.target.value)}
+                                  onKeyPress={e => e.key === 'Enter' && sendAdminMsg(session._id, session.tableNumber)}
+                                />
+                                <button 
+                                  style={S.sendBtn} 
+                                  onClick={() => sendAdminMsg(session._id, session.tableNumber)}
+                                >
+                                  पाठवा
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })
+                )}
+              </div>
+            )}  
 
           {/* QR CODES */}
           {adminTab==='qr' && (
