@@ -776,32 +776,31 @@ function AdminNotif({ notif, onClose, t }) {
   )
 }
 
-// ════════════════════════════════════════════════════════
-// ADMIN APP
-// ════════════════════════════════════════════════════════
 export function AdminApp() {
-  const [lang, setLang]           = useState('en')
+  const [lang, setLang] = useState('en')
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('admin-token'))
   const [loginData, setLoginData] = useState({ username:'', password:'' })
-  const [adminTab, setAdminTab]   = useState('pending')
+  const [adminTab, setAdminTab] = useState('pending')
   const [pendingReqs, setPendingReqs] = useState([])
-  const [sessions, setSessions]   = useState([])
-  const [orders, setOrders]       = useState([])
+  const [sessions, setSessions] = useState([])
+  const [orders, setOrders] = useState([])
   const [basicOrders, setBasicOrders] = useState([])
-  const [selected, setSelected]   = useState(null)
-  const [chatMsg, setChatMsg]     = useState('')
+  const [selected, setSelected] = useState(null)
+  const [chatMsg, setChatMsg] = useState('')
   const [histSearch, setHistSearch] = useState('')
-  const [qrData, setQrData]       = useState([])
+  const [qrData, setQrData] = useState([])
   const [notifQueue, setNotifQueue] = useState([])
+
   const socketRef = useRef(null)
   const msgEndRef = useRef(null)
 
   const t = (en, mr) => lang === 'en' ? en : mr
-  // Voice notify for Admin (using improved speak)
+
+  // Voice notify for Admin
   function voiceNotify(text) {
-    speak(text, 'mr');                    // Always use best Hindi voice for admin alerts
-    setNotifQueue(prev => [...prev, { text, id: Date.now() }]);
-    setTimeout(() => setNotifQueue(prev => prev.slice(1)), 7000);
+    speak(text, 'mr')
+    setNotifQueue(prev => [...prev, { text, id: Date.now() }])
+    setTimeout(() => setNotifQueue(prev => prev.slice(1)), 7000)
   }
 
   useEffect(() => { if (isLoggedIn) fetchAll() }, [isLoggedIn])
@@ -816,8 +815,7 @@ export function AdminApp() {
       setSessions(sAll)
       setOrders(oData.orders || [])
       setBasicOrders(oData.basicOrders || [])
-      const pending = sActive.filter ? sAll.filter(s=>s.status==='pending') : []
-      setPendingReqs(sAll.filter(s=>s.status==='pending'))
+      setPendingReqs(sAll.filter(s => s.status === 'pending'))
     } catch(e) { console.error(e) }
   }
 
@@ -831,7 +829,8 @@ export function AdminApp() {
 
   useEffect(() => {
     if (!isLoggedIn) return
-    const io = window.io; if (!io) return
+    const io = window.io
+    if (!io) return
     const socket = io(SOCKET_URL)
     socketRef.current = socket
     socket.emit('join-admin')
@@ -841,24 +840,19 @@ export function AdminApp() {
       voiceNotify(`टेबल ${data.tableNumber} वरून ${data.customerName} यांची बसण्याची विनंती आली आहे`)
     })
 
-    socket.on('voice-notify-admin', ({ text }) => { voiceNotify(text) })
-
+    socket.on('voice-notify-admin', ({ text }) => voiceNotify(text))
     socket.on('new-order', (data) => {
       setOrders(prev => [data.order, ...prev])
       voiceNotify(`टेबल ${data.tableNumber} वरून ऑर्डर आली आहे`)
     })
-
     socket.on('new-basic-order', (data) => {
       setBasicOrders(prev => [data.order, ...prev])
       voiceNotify(`टेबल ${data.order.tableNumber} वरून वस्तू मागणी आली आहे`)
     })
-
     socket.on('message-from-customer', ({ tableNumber, message, sessionId }) => {
       voiceNotify(`टेबल ${tableNumber} वरून संदेश आला आहे`)
       setSessions(prev => prev.map(s =>
-        s._id === sessionId
-          ? { ...s, messages: [...(s.messages||[]), { sender:'customer', text:message, timestamp:new Date() }] }
-          : s
+        s._id === sessionId ? { ...s, messages: [...(s.messages||[]), { sender:'customer', text:message, timestamp:new Date() }] } : s
       ))
       if (selected?._id === sessionId) {
         setSelected(prev => prev ? { ...prev, messages:[...(prev.messages||[]),{sender:'customer',text:message,timestamp:new Date()}] } : prev)
@@ -872,14 +866,20 @@ export function AdminApp() {
     return () => socket.disconnect()
   }, [isLoggedIn, selected?._id, lang])
 
-  useEffect(()=>{ msgEndRef.current?.scrollIntoView({behavior:'smooth'}) },[selected?.messages])
+  useEffect(() => { msgEndRef.current?.scrollIntoView({behavior:'smooth'}) }, [selected?.messages])
 
   async function login() {
     try {
       const data = await apiCall('/auth/login','POST', loginData)
-      if (data.token) { localStorage.setItem('admin-token', data.token); setIsLoggedIn(true) }
-      else alert('Invalid credentials')
-    } catch(e) { alert('Login failed: '+e.message) }
+      if (data.token) {
+        localStorage.setItem('admin-token', data.token)
+        setIsLoggedIn(true)
+      } else {
+        alert('Invalid credentials')
+      }
+    } catch(e) {
+      alert('Login failed: ' + e.message)
+    }
   }
 
   async function confirmSession(id) {
@@ -895,21 +895,19 @@ export function AdminApp() {
 
   async function sendWaitVoice(tableNumber, sessionId, waitMin) {
     const msg = `तुमचे जेवण ${waitMin} मिनिटांत येईल`
-    socketRef.current?.emit('send-message-to-table', { 
-      tableNumber, 
-      message: msg, 
-      type: 'wait', 
-      waitTime: waitMin 
+    socketRef.current?.emit('send-message-to-table', {
+      tableNumber,
+      message: msg,
+      type: 'wait',
+      waitTime: waitMin
     })
-    
     await apiCall(`/sessions/${sessionId}/message`, 'POST', {
-      sender: 'admin', 
-      text: msg, 
-      type: 'voice', 
-      waitTime: waitMin 
+      sender: 'admin',
+      text: msg,
+      type: 'voice',
+      waitTime: waitMin
     })
-
-    speak(msg, 'mr')   // Clear Marathi voice
+    speak(msg, 'mr')
   }
 
   async function updateItemStatus(orderId, idx, status, isBasic) {
@@ -921,18 +919,10 @@ export function AdminApp() {
       return{...o,items}
     })
     isBasic ? setBasicOrders(up) : setOrders(up)
-    // Notify customer via socket
-    const order = (isBasic?basicOrders:orders).find(o=>o._id===orderId)
-    if (order && status==='sent') {
-      const itemName = order.items[idx]?.nameMarathi||order.items[idx]?.name
-      const msg = `तुमची ${itemName} पाठवली आहे`
-      socketRef.current?.emit('send-message-to-table',{tableNumber:order.tableNumber,message:msg,type:'info'})
-      speak(msg,'mr')
-    }
   }
 
   async function sendAdminMsg(sessionId, tableNumber) {
-    if(!chatMsg.trim())return
+    if(!chatMsg.trim()) return
     const msg = {sender:'admin',text:chatMsg,timestamp:new Date()}
     socketRef.current?.emit('send-message-to-table',{tableNumber,message:chatMsg,type:'text'})
     await apiCall(`/sessions/${sessionId}/message`,'POST',{sender:'admin',text:chatMsg})
@@ -944,24 +934,25 @@ export function AdminApp() {
   async function endSession(sessionId) {
     await apiCall(`/sessions/${sessionId}/end`,'PUT')
     setSessions(prev=>prev.map(s=>s._id===sessionId?{...s,status:'completed'}:s))
-    if(selected?._id===sessionId)setSelected(null)
+    if(selected?._id===sessionId) setSelected(null)
     fetchAll()
   }
 
-  // ── LOGIN ──────────────────────────────────────────────
+  // ── LOGIN SCREEN ───────────────────────────────────────
   if (!isLoggedIn) return (
     <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#0a0a0a,#1a0000)',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
       <motion.div initial={{opacity:0,y:30}} animate={{opacity:1,y:0}} style={{background:'rgba(255,255,255,.05)',border:'1px solid rgba(200,165,32,.3)',borderRadius:24,padding:'40px 32px',width:'100%',maxWidth:380}}>
         <div style={{fontSize:48,textAlign:'center',marginBottom:8}}>👨‍💼</div>
         <h2 style={{color:'#e8c030',textAlign:'center',marginBottom:24,fontFamily:'serif'}}>Admin Login</h2>
         <input style={S.inp} placeholder="Username" value={loginData.username} onChange={e=>setLoginData(p=>({...p,username:e.target.value}))}/>
-        <input style={S.inp} type="password" placeholder="Password" value={loginData.password} onChange={e=>setLoginData(p=>({...p,password:e.target.value}))} onKeyPress={e=>e.key==='Enter'&&login()}/>
+        <input style={S.inp} type="password" placeholder="Password" value={loginData.password} onChange={e=>setLoginData(p=({...p,password:e.target.value}))} onKeyPress={e=>e.key==='Enter'&&login()}/>
         <button style={S.primaryBtn} onClick={login}>Login</button>
+        {/* Default text removed as requested */}
       </motion.div>
     </div>
   )
 
-  const activeSessions = sessions.filter(s=>s.status==='active')
+  const activeSessions = sessions.filter(s => s.status === 'active')
 
   // ── ADMIN DASHBOARD ───────────────────────────────────
   return (
@@ -1002,322 +993,307 @@ export function AdminApp() {
         ))}
       </div>
 
-      <div style={{display:'flex',flex:1,overflow:'hidden',minHeight:0}}>
-        {/* Left panel */}
-        <div style={{flex:selected?'0 0 55%':'1',overflowY:'auto',padding:16,borderRight:selected?'1px solid #222':'none'}}>
+      {/* Full Width Content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 20px 12px' }}>
 
-          {/* PENDING */}
-          {adminTab==='pending' && (
-            <div>
-              <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:12}}>{t('New Seating Requests','नवीन बसण्याच्या विनंत्या')}</div>
-              {pendingReqs.length===0
-                ? <div style={S.empty}><div style={{fontSize:36}}>🟢</div><p>{t('No pending requests','कोणतीही विनंती नाही')}</p></div>
-                : pendingReqs.map((req,i)=>{
-                  const s = req.session || req
-                  return (
-                    <motion.div key={i} initial={{opacity:0,x:-20}} animate={{opacity:1,x:0}} style={{background:'rgba(200,165,32,.05)',border:'1px solid rgba(200,165,32,.2)',borderRadius:12,padding:14,marginBottom:10}}>
-                      <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
-                        <span style={{color:'#e8c030',fontWeight:700}}>{t('Table','टेबल')} {s.tableNumber||req.tableNumber}</span>
-                        <span style={{color:'#888',fontSize:11}}>{new Date(s.createdAt||Date.now()).toLocaleTimeString()}</span>
-                      </div>
-                      <div style={{color:'#fff',marginBottom:4}}>👤 {s.customerName||req.customerName}</div>
-                      {(s.customerPhone||req.customerPhone)&&<div style={{color:'#888',fontSize:12,marginBottom:4}}>📞 {s.customerPhone||req.customerPhone}</div>}
-                      <div style={{color:'#888',fontSize:12,marginBottom:10}}>🌐 {s.language==='mr'?'मराठी':'English'}</div>
-                      <div style={{display:'flex',gap:10}}>
-                        <button style={{flex:1,padding:10,background:'#16a34a',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontWeight:700}} onClick={()=>confirmSession(s._id||req._id)}>✓ {t('Confirm','मंजूर')}</button>
-                        <button style={{flex:1,padding:10,background:'#dc2626',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontWeight:700}} onClick={()=>rejectSession(s._id||req._id)}>✗ {t('Reject','नाकार')}</button>
-                      </div>
-                    </motion.div>
-                  )
-                })
-              }
+        {/* PENDING */}
+        {adminTab==='pending' && (
+          <div>
+            <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:12}}>{t('New Seating Requests','नवीन बसण्याच्या विनंत्या')}</div>
+            {pendingReqs.length===0
+              ? <div style={S.empty}><div style={{fontSize:36}}>🟢</div><p>{t('No pending requests','कोणतीही विनंती नाही')}</p></div>
+              : pendingReqs.map((req,i)=>{
+                const s = req.session || req
+                return (
+                  <motion.div key={i} initial={{opacity:0,x:-20}} animate={{opacity:1,x:0}} style={{background:'rgba(200,165,32,.05)',border:'1px solid rgba(200,165,32,.2)',borderRadius:12,padding:14,marginBottom:10}}>
+                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+                      <span style={{color:'#e8c030',fontWeight:700}}>{t('Table','टेबल')} {s.tableNumber||req.tableNumber}</span>
+                      <span style={{color:'#888',fontSize:11}}>{new Date(s.createdAt||Date.now()).toLocaleTimeString()}</span>
+                    </div>
+                    <div style={{color:'#fff',marginBottom:4}}>👤 {s.customerName||req.customerName}</div>
+                    {(s.customerPhone||req.customerPhone)&&<div style={{color:'#888',fontSize:12,marginBottom:4}}>📞 {s.customerPhone||req.customerPhone}</div>}
+                    <div style={{color:'#888',fontSize:12,marginBottom:10}}>🌐 {s.language==='mr'?'मराठी':'English'}</div>
+                    <div style={{display:'flex',gap:10}}>
+                      <button style={{flex:1,padding:10,background:'#16a34a',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontWeight:700}} onClick={()=>confirmSession(s._id||req._id)}>✓ {t('Confirm','मंजूर')}</button>
+                      <button style={{flex:1,padding:10,background:'#dc2626',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontWeight:700}} onClick={()=>rejectSession(s._id||req._id)}>✗ {t('Reject','नाकार')}</button>
+                    </div>
+                  </motion.div>
+                )
+              })
+            }
+          </div>
+        )}
+
+        {/* LIVE ORDERS - Full Width + Clean Chat Below */}
+        {adminTab === 'live' && (
+          <div style={{ paddingBottom: 100 }}>
+            <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 17, marginBottom: 16 }}>
+              {t('Active Live Orders', 'सक्रिय लाइव ऑर्डर')}
             </div>
-          )}
-            {/* LIVE ORDERS - Final Clean Version (Chat below orders, Full Width, No Blank Space) */}
-            {adminTab === 'live' && (
-              <div style={{ 
-                flex: 1, 
-                overflowY: 'auto', 
-                padding: '16px 12px', 
-                paddingBottom: 180 
-              }}>
-                <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 17, marginBottom: 16 }}>
-                  {t('Active Live Orders', 'सक्रिय लाइव ऑर्डर')}
-                </div>
 
-                {activeSessions.length === 0 ? (
-                  <div style={S.empty}>
-                    <div style={{ fontSize: 48 }}>🟢</div>
-                    <p>{t('No active orders right now', 'सध्या कोणतीही सक्रिय ऑर्डर नाही')}</p>
-                  </div>
-                ) : (
-                  activeSessions.map(session => {
-                    const sessionMainOrders = orders.filter(o => 
-                      String(o.session) === String(session._id) && o.status !== 'completed'
-                    );
-                    const sessionBasicOrders = basicOrders.filter(o => 
-                      String(o.session) === String(session._id) && o.status !== 'served'
-                    );
+            {activeSessions.length === 0 ? (
+              <div style={S.empty}>
+                <div style={{ fontSize: 48 }}>🟢</div>
+                <p>{t('No active orders right now', 'सध्या कोणतीही सक्रिय ऑर्डर नाही')}</p>
+              </div>
+            ) : (
+              activeSessions.map(session => {
+                const sessionMainOrders = orders.filter(o => 
+                  String(o.session) === String(session._id) && o.status !== 'completed'
+                );
+                const sessionBasicOrders = basicOrders.filter(o => 
+                  String(o.session) === String(session._id) && o.status !== 'served'
+                );
 
-                    const isChatOpen = selected?._id === session._id;
+                const isChatOpen = selected?._id === session._id;
 
-                    if (sessionMainOrders.length === 0 && sessionBasicOrders.length === 0) return null;
+                if (sessionMainOrders.length === 0 && sessionBasicOrders.length === 0) return null;
 
-                    return (
-                      <motion.div 
-                        key={session._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                return (
+                  <motion.div 
+                    key={session._id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ 
+                      background: '#1c1c1c', 
+                      borderRadius: 16, 
+                      padding: 16, 
+                      marginBottom: 24,
+                      border: '1px solid rgba(200,165,32,.25)'
+                    }}
+                  >
+                    {/* Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <div>
+                        <span style={{ color: '#e8c030', fontWeight: 700, fontSize: 17 }}>
+                          टेबल {session.tableNumber} — {session.customerName}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => setSelected(isChatOpen ? null : session)}
                         style={{ 
-                          background: '#1c1c1c', 
-                          borderRadius: 16, 
-                          padding: 16, 
-                          marginBottom: 24,
-                          border: '1px solid rgba(200,165,32,.25)'
+                          padding: '10px 18px', 
+                          background: isChatOpen ? '#ef4444' : '#7b1111', 
+                          color: '#e8c030', 
+                          border: 'none', 
+                          borderRadius: 10, 
+                          fontSize: 14,
+                          fontWeight: 600 
                         }}
                       >
-                        {/* Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                          <div>
-                            <span style={{ color: '#e8c030', fontWeight: 700, fontSize: 17 }}>
-                              टेबल {session.tableNumber} — {session.customerName}
-                            </span>
-                          </div>
-                          <button 
-                            onClick={() => setSelected(isChatOpen ? null : session)}
-                            style={{ 
-                              padding: '10px 18px', 
-                              background: isChatOpen ? '#ef4444' : '#7b1111', 
-                              color: '#e8c030', 
-                              border: 'none', 
-                              borderRadius: 10, 
-                              fontSize: 14,
-                              fontWeight: 600 
-                            }}
-                          >
-                            {isChatOpen ? '✕ बंद करा' : '💬 चॅट'}
-                          </button>
-                        </div>
-
-                        {/* Main Orders */}
-                        {sessionMainOrders.length > 0 && (
-                          <div style={{ marginBottom: 20 }}>
-                            <div style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 8 }}>मुख्य ऑर्डर</div>
-                            {sessionMainOrders.map(order => (
-                              <AdminOrderCard 
-                                key={order._id}
-                                order={order}
-                                lang={lang}
-                                t={t}
-                                onUpdateItem={(idx, status) => updateItemStatus(order._id, idx, status, false)}
-                                onWaitVoice={(min) => sendWaitVoice(order.tableNumber, session._id, min)}
-                              />
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Basic Items */}
-                        {sessionBasicOrders.length > 0 && (
-                          <div style={{ marginBottom: isChatOpen ? 20 : 0 }}>
-                            <div style={{ color: '#4ade80', fontWeight: 600, marginBottom: 8 }}>इतर वस्तू</div>
-                            {sessionBasicOrders.map(order => (
-                              <AdminBasicCard 
-                                key={order._id}
-                                order={order}
-                                lang={lang}
-                                t={t}
-                                onUpdateItem={(idx, status) => updateItemStatus(order._id, idx, status, true)}
-                              />
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Chat Box - Cleanly Below Orders */}
-                        <AnimatePresence>
-                          {isChatOpen && (
-                            <motion.div 
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: 10 }}
-                              style={{ 
-                                marginTop: 24, 
-                                padding: 18, 
-                                background: '#161616', 
-                                borderRadius: 12,
-                                border: '1px solid #555'
-                              }}
-                            >
-                              <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 14, fontSize: 16 }}>💬 संभाषण</div>
-                              
-                              <div style={{ 
-                                maxHeight: '300px', 
-                                overflowY: 'auto', 
-                                marginBottom: 16, 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                gap: 12 
-                              }}>
-                                {(session.messages || []).map((msg, i) => (
-                                  <div key={i} style={{
-                                    ...S.chatBubble,
-                                    alignSelf: msg.sender === 'admin' ? 'flex-end' : 'flex-start',
-                                    background: msg.sender === 'admin' ? 'rgba(123,17,17,.8)' : 'rgba(34,197,94,.2)',
-                                    padding: '14px 16px'
-                                  }}>
-                                    <div style={S.chatSender}>
-                                      {msg.sender === 'admin' ? '👨‍💼 Admin' : `🙋 ${session.customerName}`}
-                                    </div>
-                                    <div style={{ marginTop: 6 }}>{msg.text}</div>
-                                    <div style={S.chatTime}>
-                                      {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-
-                              <div style={{ display: 'flex', gap: 8 }}>
-                                <input 
-                                  style={S.chatInp} 
-                                  placeholder="संदेश लिहा..." 
-                                  value={chatMsg} 
-                                  onChange={e => setChatMsg(e.target.value)}
-                                  onKeyPress={e => e.key === 'Enter' && sendAdminMsg(session._id, session.tableNumber)}
-                                />
-                                <button 
-                                  style={S.sendBtn} 
-                                  onClick={() => sendAdminMsg(session._id, session.tableNumber)}
-                                >
-                                  पाठवा
-                                </button>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </motion.div>
-                    );
-                  })
-                )}
-              </div>
-            )}  
-
-          {/* QR CODES */}
-          {adminTab==='qr' && (
-            <div>
-              <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:6}}>{t('QR Codes — Print & Place on Tables','QR कोड — प्रत्येक टेबलवर ठेवा')}</div>
-              <p style={{color:'#888',fontSize:13,marginBottom:16}}>{t('Each QR links to that table\'s order page. Print and laminate for each table.','प्रत्येक QR त्या टेबलच्या ऑर्डर पेजशी जोडलेला आहे.')}</p>
-              {qrData.length===0
-                ? <button style={{...S.primaryBtn,width:'auto',padding:'12px 24px'}} onClick={loadQRCodes}>{t('Load QR Codes','QR कोड लोड करा')}</button>
-                : (
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14}}>
-                    {qrData.map(({tableNumber:tn,qrCode,url})=>(
-                      <div key={tn} style={{background:'#1c1c1c',border:'1px solid #333',borderRadius:12,padding:14,textAlign:'center'}}>
-                        <div style={{fontWeight:800,color:'#e8c030',marginBottom:8,fontSize:15}}>{t('Table','टेबल')} {tn}</div>
-                        <div style={{background:'#fff',borderRadius:8,padding:8,display:'inline-block',marginBottom:8}}>
-                          <img src={qrCode} alt={`Table ${tn} QR`} style={{width:100,height:100,display:'block'}}/>
-                        </div>
-                        <div style={{color:'#666',fontSize:10,wordBreak:'break-all',marginBottom:8}}>{url}</div>
-                        <a href={qrCode} download={`table-${tn}-qr.png`}
-                          style={{display:'block',padding:'7px',background:'#7b1111',color:'#e8c030',borderRadius:8,textDecoration:'none',fontSize:12,fontWeight:700}}>
-                          ⬇ {t('Download','डाउनलोड')}
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                )
-              }
-            </div>
-          )}
-
-          {/* TABLES TAB - Fixed & Mobile Optimized */}
-          {adminTab === 'tables' && (
-            <div style={{ padding: '16px 12px' }}>
-              <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 16, marginBottom: 16 }}>
-                {t('Table Status', 'टेबल स्थिती')} ({activeSessions.length} सक्रिय)
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',   // Better for mobile
-                gap: 12
-              }}>
-                {Array.from({ length: 15 }, (_, i) => i + 1).map(num => {
-                  const session = activeSessions.find(s => s.tableNumber === num);
-
-                  return (
-                    <motion.div
-                      key={num}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => session && (setSelected(session), setAdminTab('live'))}   // Changed to 'live' for better UX
-                      style={{
-                        background: session ? '#1c1c1c' : '#161616',
-                        border: `2px solid ${session ? '#22c55e' : '#444'}`,
-                        borderRadius: 14,
-                        padding: '16px 10px',
-                        textAlign: 'center',
-                        cursor: session ? 'pointer' : 'default',
-                        minHeight: 92,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div style={{ 
-                        fontSize: 22, 
-                        fontWeight: 800, 
-                        color: session ? '#e8c030' : '#666',
-                        marginBottom: 4 
-                      }}>
-                        T{num}
-                      </div>
-
-                      {session ? (
-                        <>
-                          <div style={{ color: '#22c55e', fontSize: 13, fontWeight: 600 }}>
-                            🟢 {session.customerName?.split(' ')[0] || 'Occupied'}
-                          </div>
-                          <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
-                            {orders.filter(o => String(o.session) === String(session._id) && o.status !== 'completed').length} orders
-                          </div>
-                        </>
-                      ) : (
-                        <div style={{ color: '#555', fontSize: 13 }}>रिकामे</div>
-                      )}
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              <p style={{ color: '#666', textAlign: 'center', fontSize: 13, marginTop: 24 }}>
-                टेबलवर टॅप करा → लाइव ऑर्डर पहा
-              </p>
-            </div>
-          )}
-
-          {/* HISTORY */}
-          {adminTab==='history' && (
-            <div>
-              <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:10}}>{t('Session History','सत्र इतिहास')}</div>
-              <input style={{...S.inp,marginBottom:12}} placeholder={t('Search name, table...','नाव, टेबल शोधा...')} value={histSearch} onChange={e=>setHistSearch(e.target.value)}/>
-              {sessions
-                .filter(s=>!histSearch||s.customerName?.toLowerCase().includes(histSearch.toLowerCase())||s.tableNumber?.toString().includes(histSearch))
-                .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))
-                .map(session=>(
-                  <motion.div key={session._id} whileHover={{scale:1.005}} style={{background:'#1c1c1c',border:'1px solid #333',borderRadius:12,padding:14,marginBottom:10,cursor:'pointer'}}
-                    onClick={()=>setSelected(session)}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                      <span style={{color:'#e8c030',fontWeight:700}}>{t('Table','टेबल')} {session.tableNumber}</span>
-                      <span style={{padding:'2px 10px',borderRadius:10,fontSize:11,fontWeight:700,background:session.status==='active'?'rgba(34,197,94,.2)':'rgba(100,100,100,.2)',color:session.status==='active'?'#22c55e':'#888'}}>{session.status}</span>
+                        {isChatOpen ? '✕ बंद करा' : '💬 चॅट'}
+                      </button>
                     </div>
-                    <div style={{color:'#fff',marginBottom:4}}>👤 {session.customerName}</div>
-                    <div style={{color:'#888',fontSize:12}}>📅 {new Date(session.startTime||session.createdAt).toLocaleString()}</div>
-                    <div style={{color:'#e8c030',fontSize:13,marginTop:4}}>₹{session.totalAmount||0} • {session.orders?.length||0} orders</div>
+
+                    {/* Main Orders */}
+                    {sessionMainOrders.length > 0 && (
+                      <div style={{ marginBottom: 20 }}>
+                        <div style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 8 }}>मुख्य ऑर्डर</div>
+                        {sessionMainOrders.map(order => (
+                          <AdminOrderCard 
+                            key={order._id}
+                            order={order}
+                            lang={lang}
+                            t={t}
+                            onUpdateItem={(idx, status) => updateItemStatus(order._id, idx, status, false)}
+                            onWaitVoice={(min) => sendWaitVoice(order.tableNumber, session._id, min)}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Basic Items */}
+                    {sessionBasicOrders.length > 0 && (
+                      <div style={{ marginBottom: isChatOpen ? 20 : 0 }}>
+                        <div style={{ color: '#4ade80', fontWeight: 600, marginBottom: 8 }}>इतर वस्तू</div>
+                        {sessionBasicOrders.map(order => (
+                          <AdminBasicCard 
+                            key={order._id}
+                            order={order}
+                            lang={lang}
+                            t={t}
+                            onUpdateItem={(idx, status) => updateItemStatus(order._id, idx, status, true)}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Chat Box */}
+                    <AnimatePresence>
+                      {isChatOpen && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          style={{ 
+                            marginTop: 24, 
+                            padding: 18, 
+                            background: '#161616', 
+                            borderRadius: 12,
+                            border: '1px solid #555'
+                          }}
+                        >
+                          <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 14 }}>💬 संभाषण</div>
+                          
+                          <div style={{ 
+                            maxHeight: '300px', 
+                            overflowY: 'auto', 
+                            marginBottom: 16, 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: 12 
+                          }}>
+                            {(session.messages || []).map((msg, i) => (
+                              <div key={i} style={{
+                                ...S.chatBubble,
+                                alignSelf: msg.sender === 'admin' ? 'flex-end' : 'flex-start',
+                                background: msg.sender === 'admin' ? 'rgba(123,17,17,.8)' : 'rgba(34,197,94,.2)',
+                                padding: '14px 16px'
+                              }}>
+                                <div style={S.chatSender}>
+                                  {msg.sender === 'admin' ? '👨‍💼 Admin' : `🙋 ${session.customerName}`}
+                                </div>
+                                <div style={{ marginTop: 6 }}>{msg.text}</div>
+                                <div style={S.chatTime}>
+                                  {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <input 
+                              style={S.chatInp} 
+                              placeholder="संदेश लिहा..." 
+                              value={chatMsg} 
+                              onChange={e => setChatMsg(e.target.value)}
+                              onKeyPress={e => e.key === 'Enter' && sendAdminMsg(session._id, session.tableNumber)}
+                            />
+                            <button 
+                              style={S.sendBtn} 
+                              onClick={() => sendAdminMsg(session._id, session.tableNumber)}
+                            >
+                              पाठवा
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
-                ))
-              }
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* QR CODES */}
+        {adminTab==='qr' && (
+          <div>
+            <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:6}}>{t('QR Codes — Print & Place on Tables','QR कोड — प्रत्येक टेबलवर ठेवा')}</div>
+            <p style={{color:'#888',fontSize:13,marginBottom:16}}>{t('Each QR links to that table\'s order page. Print and laminate for each table.','प्रत्येक QR त्या टेबलच्या ऑर्डर पेजशी जोडलेला आहे.')}</p>
+            {qrData.length===0
+              ? <button style={{...S.primaryBtn,width:'auto',padding:'12px 24px'}} onClick={loadQRCodes}>{t('Load QR Codes','QR कोड लोड करा')}</button>
+              : (
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14}}>
+                  {qrData.map(({tableNumber:tn,qrCode,url})=>(
+                    <div key={tn} style={{background:'#1c1c1c',border:'1px solid #333',borderRadius:12,padding:14,textAlign:'center'}}>
+                      <div style={{fontWeight:800,color:'#e8c030',marginBottom:8,fontSize:15}}>{t('Table','टेबल')} {tn}</div>
+                      <div style={{background:'#fff',borderRadius:8,padding:8,display:'inline-block',marginBottom:8}}>
+                        <img src={qrCode} alt={`Table ${tn} QR`} style={{width:100,height:100,display:'block'}}/>
+                      </div>
+                      <div style={{color:'#666',fontSize:10,wordBreak:'break-all',marginBottom:8}}>{url}</div>
+                      <a href={qrCode} download={`table-${tn}-qr.png`}
+                        style={{display:'block',padding:'7px',background:'#7b1111',color:'#e8c030',borderRadius:8,textDecoration:'none',fontSize:12,fontWeight:700}}>
+                        ⬇ {t('Download','डाउनलोड')}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+          </div>
+        )}
+
+        {/* TABLES TAB */}
+        {adminTab === 'tables' && (
+          <div style={{ padding: '16px 12px' }}>
+            <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 16, marginBottom: 16 }}>
+              {t('Table Status', 'टेबल स्थिती')} ({activeSessions.length} सक्रिय)
             </div>
-          )}
-        </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
+              gap: 12
+            }}>
+              {Array.from({ length: 15 }, (_, i) => i + 1).map(num => {
+                const session = activeSessions.find(s => s.tableNumber === num);
+                return (
+                  <motion.div
+                    key={num}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => session && (setSelected(session), setAdminTab('live'))}
+                    style={{
+                      background: session ? '#1c1c1c' : '#161616',
+                      border: `2px solid ${session ? '#22c55e' : '#444'}`,
+                      borderRadius: 14,
+                      padding: '16px 10px',
+                      textAlign: 'center',
+                      cursor: session ? 'pointer' : 'default',
+                      minHeight: 92,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div style={{ fontSize: 22, fontWeight: 800, color: session ? '#e8c030' : '#666', marginBottom: 4 }}>
+                      T{num}
+                    </div>
+                    {session ? (
+                      <>
+                        <div style={{ color: '#22c55e', fontSize: 13, fontWeight: 600 }}>
+                          🟢 {session.customerName?.split(' ')[0] || 'Occupied'}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
+                          {orders.filter(o => String(o.session) === String(session._id) && o.status !== 'completed').length} orders
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ color: '#555', fontSize: 13 }}>रिकामे</div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+            <p style={{ color: '#666', textAlign: 'center', fontSize: 13, marginTop: 24 }}>
+              टेबलवर टॅप करा → लाइव ऑर्डर पहा
+            </p>
+          </div>
+        )}
+
+        {/* HISTORY */}
+        {adminTab==='history' && (
+          <div>
+            <div style={{color:'#e8c030',fontWeight:800,fontSize:15,marginBottom:10}}>{t('Session History','सत्र इतिहास')}</div>
+            <input style={{...S.inp,marginBottom:12}} placeholder={t('Search name, table...','नाव, टेबल शोधा...')} value={histSearch} onChange={e=>setHistSearch(e.target.value)}/>
+            {sessions
+              .filter(s=>!histSearch||s.customerName?.toLowerCase().includes(histSearch.toLowerCase())||s.tableNumber?.toString().includes(histSearch))
+              .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))
+              .map(session=>(
+                <motion.div key={session._id} whileHover={{scale:1.005}} style={{background:'#1c1c1c',border:'1px solid #333',borderRadius:12,padding:14,marginBottom:10,cursor:'pointer'}}
+                  onClick={()=>setSelected(session)}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                    <span style={{color:'#e8c030',fontWeight:700}}>{t('Table','टेबल')} {session.tableNumber}</span>
+                    <span style={{padding:'2px 10px',borderRadius:10,fontSize:11,fontWeight:700,background:session.status==='active'?'rgba(34,197,94,.2)':'rgba(100,100,100,.2)',color:session.status==='active'?'#22c55e':'#888'}}>{session.status}</span>
+                  </div>
+                  <div style={{color:'#fff',marginBottom:4}}>👤 {session.customerName}</div>
+                  <div style={{color:'#888',fontSize:12}}>📅 {new Date(session.startTime||session.createdAt).toLocaleString()}</div>
+                  <div style={{color:'#e8c030',fontSize:13,marginTop:4}}>₹{session.totalAmount||0} • {session.orders?.length||0} orders</div>
+                </motion.div>
+              ))
+            }
+          </div>
+        )}
       </div>
     </div>
   )
