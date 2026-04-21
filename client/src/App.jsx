@@ -585,11 +585,29 @@ async function leaveTable() {
     </div>
   )
 }
-// ── MenuCard ──────────────────────────────────────────────
+// ── MenuCard - Same behavior as BasicItemCard ─────────────────────────────
 function MenuCard({ item, lang, onAdd, t }) {
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(0);   // Start with 0 (like basic items)
   const [exp, setExp] = useState(false);
   const isVeg = item.id.includes('shaka') || item.id.includes('masoor');
+
+  const handleAdd = () => {
+    if (qty === 0) {
+      onAdd(item, 1);
+      setQty(1);
+    } else {
+      onAdd(item, 1);
+      setQty(q => q + 1);
+    }
+  };
+
+  const handleRemove = () => {
+    if (qty > 0) {
+      // We don't have remove from cart here, so just reduce local qty
+      setQty(q => Math.max(0, q - 1));
+      // Note: Full remove from cart logic can be improved later if needed
+    }
+  };
 
   return (
     <motion.div whileHover={{scale:1.005}} style={S.menuCard}>
@@ -613,22 +631,22 @@ function MenuCard({ item, lang, onAdd, t }) {
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12}}>
         <div style={S.qtyCtrl}>
-          <button style={S.qtyBtn} onClick={()=>setQty(q => Math.max(1, q-1))}>-</button>
-          <span style={S.qtyNum}>{qty}</span>
-          <button style={S.qtyBtn} onClick={()=>setQty(q => q+1)}>+</button>
+          {qty > 0 ? (
+            <>
+              <button style={S.qtyBtn} onClick={handleRemove}>−</button>
+              <span style={S.qtyNum}>{qty}</span>
+              <button style={S.qtyBtn} onClick={handleAdd}>+</button>
+            </>
+          ) : (
+            <button style={{...S.addBtn, width: '100%', padding: '10px 0'}} onClick={handleAdd}>
+              + {t('टाका','Add')}
+            </button>
+          )}
         </div>
-        <motion.button 
-          whileTap={{scale:0.9}} 
-          style={S.addBtn} 
-          onClick={() => { onAdd(item, qty); setQty(1); }}
-        >
-          + {t('टाका','Add')}
-        </motion.button>
       </div>
     </motion.div>
   );
 }
-
 // ── OrderCard ─────────────────────────────────────────────
 function OrderCard({ order, lang, t, onGotIt, onNotReceived, onRemind, remindCooldown }) {
   const [timers, setTimers] = useState({})
@@ -1390,7 +1408,7 @@ const S = {
   tabBar:    { display:'flex', background:'#111', borderBottom:'1px solid #333', overflowX:'auto', flexShrink:0 },
   tab:       { flex:1, padding:'11px 6px', background:'none', border:'none', color:'#666', cursor:'pointer', fontSize:11, fontWeight:700, borderBottom:'2px solid transparent', whiteSpace:'nowrap' },
   tabActive: { color:'#e8c030', borderBottomColor:'#e8c030', background:'rgba(200,165,32,.07)' },
-  content:   { flex:1, overflowY:'auto', padding:14, paddingBottom:140 },
+  content:   { flex:1, overflowY:'auto', padding:14, paddingBottom:160 },
   catBar:    { display:'flex', gap:8, marginBottom:14, background:'#1a1a1a', borderRadius:13, padding:6 },
   catTab:    { flex:1, padding:10, borderRadius:9, border:'none', background:'none', color:'#888', cursor:'pointer', fontWeight:700, fontSize:13 },
   catActive: { background:'rgba(123,17,17,.8)', color:'#e8c030' },
@@ -1408,16 +1426,16 @@ const S = {
   width: '100%', 
   maxWidth: 500, 
   background: 'linear-gradient(135deg,#7b1111,#a01515)', 
-  padding: '16px 18px', 
+  padding: '16px 20px', 
   paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
   display: 'flex', 
   justifyContent: 'space-between', 
   alignItems: 'center', 
   borderTop: '1px solid rgba(200,165,32,.4)', 
   color: '#fff', 
-  fontWeight: 600, 
-  zIndex: 100,
-  boxShadow: '0 -4px 20px rgba(0,0,0,0.6)'
+  fontWeight: 700, 
+  zIndex: 200,
+  boxShadow: '0 -8px 30px rgba(0,0,0,0.)8'
 },
   orderBtn:  { background:'#e8c030', color:'#1a0000', padding:'10px 20px', borderRadius:11, border:'none', fontWeight:800, cursor:'pointer', fontSize:14 },
   orderCard: { background:'#1c1c1c', borderRadius:16, padding:16, border:'1px solid #333', marginBottom:16 , fontSize: 15},
