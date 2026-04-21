@@ -1035,10 +1035,11 @@ export function AdminApp() {
             </div>
           )}
 
-          {/* LIVE ORDERS - Mobile Friendly */}
+          {/* LIVE ORDERS - Chat opens below orders (Mobile Friendly) */}
+          {/* LIVE ORDERS - Chat opens below orders (No Blue Button) */}
           {adminTab === 'live' && (
-            <div style={{ paddingBottom: 20 }}>
-              <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 16, marginBottom: 16 }}>
+            <div style={{ padding: '16px 12px', paddingBottom: 100 }}>
+              <div style={{ color: '#e8c030', fontWeight: 800, fontSize: 17, marginBottom: 16 }}>
                 {t('Active Live Orders', 'सक्रिय लाइव ऑर्डर')}
               </div>
 
@@ -1052,10 +1053,11 @@ export function AdminApp() {
                   const sessionMainOrders = orders.filter(o => 
                     String(o.session) === String(session._id) && o.status !== 'completed'
                   );
-
                   const sessionBasicOrders = basicOrders.filter(o => 
                     String(o.session) === String(session._id) && o.status !== 'served'
                   );
+
+                  const isChatOpen = selected?._id === session._id;
 
                   if (sessionMainOrders.length === 0 && sessionBasicOrders.length === 0) return null;
 
@@ -1072,17 +1074,26 @@ export function AdminApp() {
                         border: '1px solid rgba(200,165,32,.25)'
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      {/* Table Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                         <div>
                           <span style={{ color: '#e8c030', fontWeight: 700, fontSize: 17 }}>
                             टेबल {session.tableNumber} — {session.customerName}
                           </span>
                         </div>
                         <button 
-                          onClick={() => setSelected(session)}
-                          style={{ padding: '8px 14px', background: '#7b1111', color: '#e8c030', border: 'none', borderRadius: 10, fontSize: 14 }}
+                          onClick={() => setSelected(isChatOpen ? null : session)}
+                          style={{ 
+                            padding: '10px 18px', 
+                            background: isChatOpen ? '#ef4444' : '#7b1111', 
+                            color: '#e8c030', 
+                            border: 'none', 
+                            borderRadius: 10, 
+                            fontSize: 14,
+                            fontWeight: 600 
+                          }}
                         >
-                          💬 चॅट
+                          {isChatOpen ? '✕ बंद करा' : '💬 चॅट'}
                         </button>
                       </div>
 
@@ -1105,7 +1116,7 @@ export function AdminApp() {
 
                       {/* Basic Items */}
                       {sessionBasicOrders.length > 0 && (
-                        <div>
+                        <div style={{ marginBottom: isChatOpen ? 12 : 0 }}>
                           <div style={{ color: '#4ade80', fontWeight: 600, marginBottom: 8 }}>इतर वस्तू</div>
                           {sessionBasicOrders.map(order => (
                             <AdminBasicCard 
@@ -1118,6 +1129,54 @@ export function AdminApp() {
                           ))}
                         </div>
                       )}
+
+                      {/* Chat Box - Opens BELOW the orders */}
+                      <AnimatePresence>
+                        {isChatOpen && (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            style={{ marginTop: 16, borderTop: '1px solid #333', paddingTop: 16 }}
+                          >
+                            <div style={{ color: '#4ade80', fontWeight: 700, marginBottom: 10 }}>💬 संभाषण</div>
+                            
+                            <div style={{ maxHeight: '260px', overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {(session.messages || []).map((msg, i) => (
+                                <div key={i} style={{
+                                  ...S.chatBubble,
+                                  alignSelf: msg.sender === 'admin' ? 'flex-end' : 'flex-start',
+                                  background: msg.sender === 'admin' ? 'rgba(123,17,17,.65)' : 'rgba(34,197,94,.12)'
+                                }}>
+                                  <div style={S.chatSender}>
+                                    {msg.sender === 'admin' ? '👨‍💼 Admin' : `🙋 ${session.customerName}`}
+                                  </div>
+                                  <div>{msg.text}</div>
+                                  <div style={S.chatTime}>
+                                    {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <input 
+                                style={S.chatInp} 
+                                placeholder="संदेश लिहा..." 
+                                value={chatMsg} 
+                                onChange={e => setChatMsg(e.target.value)}
+                                onKeyPress={e => e.key === 'Enter' && sendAdminMsg(session._id, session.tableNumber)}
+                              />
+                              <button 
+                                style={S.sendBtn} 
+                                onClick={() => sendAdminMsg(session._id, session.tableNumber)}
+                              >
+                                पाठवा
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   );
                 })
@@ -1408,7 +1467,11 @@ const S = {
   tabBar:    { display:'flex', background:'#111', borderBottom:'1px solid #333', overflowX:'auto', flexShrink:0 },
   tab:       { flex:1, padding:'11px 6px', background:'none', border:'none', color:'#666', cursor:'pointer', fontSize:11, fontWeight:700, borderBottom:'2px solid transparent', whiteSpace:'nowrap' },
   tabActive: { color:'#e8c030', borderBottomColor:'#e8c030', background:'rgba(200,165,32,.07)' },
-  content:   { flex:1, overflowY:'auto', padding:14, paddingBottom:160 },
+  content: { 
+  flex: 1, 
+  overflowY: 'auto', 
+  padding: '14px 14px 220px 14px', 
+},
   catBar:    { display:'flex', gap:8, marginBottom:14, background:'#1a1a1a', borderRadius:13, padding:6 },
   catTab:    { flex:1, padding:10, borderRadius:9, border:'none', background:'none', color:'#888', cursor:'pointer', fontWeight:700, fontSize:13 },
   catActive: { background:'rgba(123,17,17,.8)', color:'#e8c030' },
@@ -1421,23 +1484,32 @@ const S = {
   cartBar: { 
   position: 'fixed', 
   bottom: 0, 
-  left: '50%', 
-  transform: 'translateX(-50%)', 
+  left: 0,                    // Changed to left: 0
+  right: 0,                   // Added right: 0 for full width
   width: '100%', 
   maxWidth: 500, 
   background: 'linear-gradient(135deg,#7b1111,#a01515)', 
-  padding: '16px 20px', 
-  paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+  padding: '18px 20px', 
+  paddingBottom: 'max(32px, env(safe-area-inset-bottom))', 
   display: 'flex', 
   justifyContent: 'space-between', 
   alignItems: 'center', 
-  borderTop: '1px solid rgba(200,165,32,.4)', 
-  color: '#fff', 
-  fontWeight: 700, 
-  zIndex: 200,
-  boxShadow: '0 -8px 30px rgba(0,0,0,0.)8'
+  zIndex: 300,
+  boxShadow: '0 -10px 35px rgba(0,0,0,0.9)',
+  borderTop: '2px solid #e8c030'
 },
-  orderBtn:  { background:'#e8c030', color:'#1a0000', padding:'10px 20px', borderRadius:11, border:'none', fontWeight:800, cursor:'pointer', fontSize:14 },
+  orderBtn: { 
+  background: '#e8c030', 
+  color: '#1a0000', 
+  padding: '16px 32px', 
+  borderRadius: 14, 
+  border: 'none', 
+  fontWeight: 800, 
+  fontSize: 17,
+  cursor: 'pointer',
+  minWidth: 180,
+  boxShadow: '0 4px 20px rgba(232, 192, 48, 0.6)'
+},
   orderCard: { background:'#1c1c1c', borderRadius:16, padding:16, border:'1px solid #333', marginBottom:16 , fontSize: 15},
   gotBtn:    { padding:'10px 16px', background:'#16a34a', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:14 ,minWidth: 90 },
   notGotBtn: { padding:'6px 13px', background:'#dc2626', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:12 },
