@@ -957,7 +957,6 @@ export function AdminApp() {
         <input style={S.inp} placeholder="Username" value={loginData.username} onChange={e=>setLoginData(p=>({...p,username:e.target.value}))}/>
         <input style={S.inp} type="password" placeholder="Password" value={loginData.password} onChange={e=>setLoginData(p=>({...p,password:e.target.value}))} onKeyPress={e=>e.key==='Enter'&&login()}/>
         <button style={S.primaryBtn} onClick={login}>Login</button>
-        <p style={{color:'#666',textAlign:'center',fontSize:12,marginTop:14}}>Default: admin / pahunchar2024</p>
       </motion.div>
     </div>
   )

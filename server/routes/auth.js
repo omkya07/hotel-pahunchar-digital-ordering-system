@@ -4,79 +4,52 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Admin } = require('../models');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'hotel-pahunchar-secret-2026-kolhapur';
+const JWT_SECRET = process.env.JWT_SECRET || 'hotel-pahunchar-secret-2024';
 
-// ====================== LOGIN ======================
+// ====================== TEMPORARY BYPASS FOR TESTING ======================
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
+    // Temporary bypass - Remove after successful login
+    if (username === 'Admin' && password === 'Pahunchar2k26') {
+      const token = jwt.sign({ id: 'temp-admin', username: 'Admin' }, JWT_SECRET, { expiresIn: '24h' });
+      return res.json({ 
+        token, 
+        admin: { 
+          id: 'temp-admin', 
+          username: 'Admin', 
+          name: 'Hotel Pahunchar Admin' 
+        } 
+      });
     }
 
-    const admin = await Admin.findOne({ username: username.trim() });
+    // Normal login logic (kept for future)
+    const admin = await Admin.findOne({ username });
+    if (!admin) return res.status(401).json({ error: 'Invalid credentials' });
 
-    if (!admin) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
+    const valid = await bcrypt.compare(password, admin.password);
+    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const validPassword = await bcrypt.compare(password, admin.password);
-
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: admin._id, username: admin.username }, 
-      JWT_SECRET, 
-      { expiresIn: '24h' }
-    );
-
-    res.json({ 
-      token, 
-      admin: { 
-        id: admin._id, 
-        username: admin.username, 
-        name: admin.name || 'Hotel Pahunchar Admin' 
-      } 
-    });
+    const token = jwt.sign({ id: admin._id, username }, JWT_SECRET, { expiresIn: '24h' });
+    res.json({ token, admin: { id: admin._id, username, name: admin.name } });
 
   } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Server error during login' });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ====================== SETUP (for first time only) ======================
+// Setup admin (keep for future use)
 router.post('/setup', async (req, res) => {
   try {
     const count = await Admin.countDocuments();
-    if (count > 0) {
-      return res.status(400).json({ error: 'Admin already exists. Use login instead.' });
-    }
-
+    if (count > 0) return res.status(400).json({ error: 'Admin already exists' });
     const { username, password, name } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const admin = await Admin.create({ 
-      username, 
-      password: hashedPassword, 
-      name: name || 'Hotel Pahunchar Admin' 
-    });
-
-    res.json({ 
-      message: 'Admin created successfully', 
-      admin: { id: admin._id, username: admin.username } 
-    });
-
+    const hashed = await bcrypt.hash(password, 10);
+    const admin = await Admin.create({ username, password: hashed, name });
+    res.json({ message: 'Admin created', admin: { id: admin._id, username } });
   } catch (err) {
-    console.error('Setup error:', err);
-    res.status(500).json({ error: 'Server error during setup' });
+    res.status(500).json({ error: err.message });
   }
 });
 
