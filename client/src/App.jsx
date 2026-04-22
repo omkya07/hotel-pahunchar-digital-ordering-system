@@ -158,49 +158,45 @@ export function CustomerApp({ tableNumber }) {
     localStorage.setItem(SESSION_KEY(tableNumber), JSON.stringify({ phase, customer, session, orders, basicOrders, messages }))
   }, [phase, customer, session, orders, basicOrders, messages])
 
-    // ── Socket setup – Final Fixed for "Sent" notification ─────────────────────
+  // ── Socket ────────────────────────────────────────
   useEffect(() => {
     const io = window.io
     if (!io) { console.warn('Socket.IO not loaded'); return }
-
-    const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] })
+    const socket = io(SOCKET_URL, { transports: ['websocket','polling'] })
     socketRef.current = socket
 
     socket.on('connect', () => {
-      console.log('✅ Socket Connected on Table', tableNumber)
+      console.log('✅ Socket connected')
       if (session?._id) socket.emit('join-table', { tableNumber, sessionId: session._id })
     })
 
     socket.on('session-confirmed', ({ session: s, message }) => {
-      setSession(s)
-      setPhase('active')
+      setSession(s); setPhase('active')
       socket.emit('join-table', { tableNumber, sessionId: s._id })
-      const msg = message || t(`टेबल ${tableNumber} वर स्वागत आहे!`, `Welcome to Table ${tableNumber}!`)
+      const msg = message || `टेबल ${tableNumber} वर स्वागत आहे! आता ऑर्डर करा.`
       notify(msg, 'success')
     })
 
     socket.on('session-rejected', ({ message }) => {
-      notify(message || t('विनंती नाकारली', 'Request rejected'), 'error')
+      notify(message || 'विनंती नाकारली गेली.', 'error')
       setTimeout(() => { setPhase('join'); localStorage.removeItem(SESSION_KEY(tableNumber)) }, 4000)
     })
 
     socket.on('session-ended', () => {
-      setPhase('ended')
-      localStorage.removeItem(SESSION_KEY(tableNumber))
-      speak('धन्यवाद! पुन्हा या.', 'mr')
+      setPhase('ended'); localStorage.removeItem(SESSION_KEY(tableNumber))
+      speak('धन्यवाद! पुन्हा या.')
     })
 
-    // Admin text / wait message
+    // ── Admin wait/text message → customer ───────────
     socket.on('message-from-admin', ({ message, type, waitTime }) => {
-      const msg = { sender: 'admin', text: message, type, waitTime, timestamp: new Date() }
-      setMessages(prev => [...prev, msg])
-      notify(message, waitTime ? 'wait' : 'info', waitTime)
-      speak(message, 'mr')
+      setMessages(prev => [...prev, { sender:'admin', text:message, type, waitTime, timestamp:new Date() }])
+      // ✅ Flash + Voice for wait messages (2/3/5 min button)
+      notify(message, waitTime ? 'wait' : 'info', waitTime || null, waitTime ? 999999 : 8000)
     })
 
-        // 🔥 FINAL FIXED: Admin "Sent" → Customer gets flash + voice
+    // ── ✅ KEY FIX: Admin marks item as "Sent" → customer gets flash + voice ──
     socket.on('item-status-update', ({ orderId, itemIndex, status, isBasic, itemName }) => {
-      console.log(`📦 Customer received item update: ${itemName} → ${status}`)
+      console.log(`📦 item-status-update: ${itemName} → ${status}`)
 
       const updater = prev => prev.map(o => {
         if (o._id !== orderId) return o
@@ -210,18 +206,43 @@ export function CustomerApp({ tableNumber }) {
       })
 
       if (isBasic) setBasicOrders(updater)
-      else setOrders(updater)
+      else         setOrders(updater)
 
       if (status === 'sent') {
-        const name = itemName || t('आपला आयटम', 'Your item')
-        const text = t(`${name} पाठवला गेला आहे`, `${name} has been sent`)
+        const name = itemName || t('आपला आयटम','Your item')
+        const text = t(`${name} पाठवली आहे! मिळाली का?`, `${name} has been sent!`)
+        // ✅ Flash + Voice simultaneously
         notify(text, 'success', null, 10000)
-        speak(text, lang)
       }
     })
 
+    // Fallback legacy events
+    socket.on('order-item-update', ({ orderId, itemIndex, status }) => {
+      setOrders(prev => prev.map(o => {
+        if (o._id !== orderId) return o
+        const items = [...o.items]; items[itemIndex] = { ...items[itemIndex], status }
+        if (status === 'sent') {
+          const name = items[itemIndex]?.nameMarathi || items[itemIndex]?.name || 'आयटम'
+          notify(`${name} पाठवली आहे!`, 'success', null, 10000)
+        }
+        return { ...o, items }
+      }))
+    })
+
+    socket.on('basic-order-item-update', ({ orderId, itemIndex, status }) => {
+      setBasicOrders(prev => prev.map(o => {
+        if (o._id !== orderId) return o
+        const items = [...o.items]; items[itemIndex] = { ...items[itemIndex], status }
+        if (status === 'sent') {
+          const name = items[itemIndex]?.nameMarathi || items[itemIndex]?.name || 'आयटम'
+          notify(`${name} पाठवली आहे!`, 'success', null, 10000)
+        }
+        return { ...o, items }
+      }))
+    })
+
     return () => socket.disconnect()
-  }, [tableNumber, notify, lang, t])
+  }, [tableNumber, notify])
 
   // Reload orders on refresh
   useEffect(() => {
@@ -796,51 +817,22 @@ export function AdminApp() {
     voiceNotify(`🔊 टेबल ${tableNumber} ला संदेश पाठवला: ${msg}`, 'wait')
   }
 
-     async function updateItemStatus(orderId, idx, status, isBasic) {
-    const url = isBasic 
-      ? `/orders/basic/${orderId}/item/${idx}/status` 
-      : `/orders/${orderId}/item/${idx}/status`
-
+  async function updateItemStatus(orderId, idx, status, isBasic) {
+    const url = isBasic ? `/orders/basic/${orderId}/item/${idx}/status` : `/orders/${orderId}/item/${idx}/status`
     try {
-      await apiCall(url, 'PUT', { status })
+      await apiCall(url,'PUT',{status})
+      const updater = prev => prev.map(o => o._id!==orderId ? o : { ...o, items:o.items.map((item,i)=>i===idx?{...item,status}:item) })
+      if (isBasic) setBasicOrders(updater); else setOrders(updater)
 
-      // Update Admin UI
-      const updater = prev => prev.map(o => 
-        o._id !== orderId ? o : {
-          ...o, 
-          items: o.items.map((item, i) => i === idx ? { ...item, status } : item)
-        }
-      )
-
-      if (isBasic) setBasicOrders(updater)
-      else setOrders(updater)
-
-      // 🔥 Send real-time update to customer
+      // ✅ KEY: emit item-status-update to customer so they get flash + voice
       const currentOrders = isBasic ? basicOrders : orders
       const order = currentOrders.find(o => o._id === orderId)
-
       if (order && socketRef.current) {
-        const item = order.items[idx]
-        const itemName = item?.nameMarathi || item?.name || 'आयटम'
-
-        socketRef.current.emit('item-status-update', {
-          tableNumber: order.tableNumber,
-          orderId,
-          itemIndex: idx,
-          status,
-          isBasic,
-          itemName
-        })
-
-        if (status === 'sent') {
-          voiceNotify(`टेबल ${order.tableNumber} - ${itemName} पाठवले`)
-        }
+        const itemName = order.items[idx]?.nameMarathi || order.items[idx]?.name || 'आयटम'
+        socketRef.current.emit('item-status-update', { tableNumber:order.tableNumber, orderId, itemIndex:idx, status, isBasic, itemName })
+        if (status === 'sent') voiceNotify(`✅ टेबल ${order.tableNumber}: "${itemName}" पाठवले`, 'success')
       }
-
-    } catch (err) {
-      console.error('Update item status failed:', err)
-      alert('Failed to update status')
-    }
+    } catch(err) { console.error('Update failed:', err) }
   }
 
   async function sendAdminMsg(sessionId, tableNumber) {
