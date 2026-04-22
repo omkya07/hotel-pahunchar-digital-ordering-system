@@ -7,95 +7,92 @@ const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*', methods: ['GET','POST','PUT','DELETE'] } });
 
-const CLIENT_URL = process.env.CLIENT_URL || 'https://hotel-pahunchar-digital-ordering-sy.vercel.app';
-
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:5173",
-  CLIENT_URL,
-  "https://hotel-pahunchar-digital-ordering-sy.vercel.app"
-];
-
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
-}));
-
+app.use(cors());
 app.use(express.json());
-
-// ====================== BASIC TEST ROUTES ======================
-app.get('/', (req, res) => {
-  res.json({ 
-    message: "Hotel Pahunchar Backend is Running!",
-    status: "ok",
-    version: "1.0"
-  });
-});
-
-app.get('/api', (req, res) => {
-  res.json({ 
-    message: "Hotel Pahunchar API is Running!",
-    status: "ok"
-  });
-});
-
-// ====================== MAIN ROUTES ======================
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/tables', require('./routes/tables'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/sessions', require('./routes/sessions'));
-app.use('/api/menu', require('./routes/menu'));
-app.use('/api/qr', require('./routes/qr'));
-
-// Socket.IO Setup
-const io = new Server(server, {
-  cors: { 
-    origin: allowedOrigins, 
-    credentials: true 
-  }
-});
-
 app.set('io', io);
 
+app.use('/api/auth',     require('./routes/auth'));
+app.use('/api/tables',   require('./routes/tables'));
+app.use('/api/orders',   require('./routes/orders'));
+app.use('/api/sessions', require('./routes/sessions'));
+app.use('/api/menu',     require('./routes/menu'));
+app.use('/api/qr',       require('./routes/qr'));
+
 io.on('connection', (socket) => {
-  console.log('🔌 User connected:', socket.id);
 
   socket.on('join-admin', () => {
     socket.join('admin-room');
-    console.log('👨‍💼 Admin joined admin-room');
+    console.log('Admin connected:', socket.id);
   });
 
   socket.on('join-table', ({ tableNumber, sessionId }) => {
     socket.join(`table-${tableNumber}`);
-    console.log(`📱 Table ${tableNumber} joined`);
+    socket.tableNumber = tableNumber;
+    socket.sessionId = sessionId;
+    console.log(`Table ${tableNumber} joined`);
   });
 
+  // Admin → Customer (wait message / text message)
   socket.on('send-message-to-table', ({ tableNumber, message, type, waitTime }) => {
-    io.to(`table-${tableNumber}`).emit('message-from-admin', { 
-      message, type, waitTime, timestamp: new Date() 
-    });
+    io.to(`table-${tableNumber}`).emit('message-from-admin', { message, type, waitTime, timestamp: new Date() });
   });
 
+  // Customer → Admin message
   socket.on('send-message-to-admin', ({ tableNumber, message, sessionId }) => {
-    io.to('admin-room').emit('message-from-customer', { 
-      tableNumber, message, sessionId, timestamp: new Date() 
+    io.to('admin-room').emit('message-from-customer', { tableNumber, message, sessionId, timestamp: new Date() });
+    // Voice + flash notify admin
+    io.to('admin-room').emit('voice-notify-admin', {
+      text: `टेबल ${tableNumber} वरून संदेश आला आहे: ${message}`,
+      type: 'remind'
     });
   });
 
-  socket.on('disconnect', () => {
-    console.log('❌ User disconnected:', socket.id);
+  // Customer clicked "Not Received" — notify admin with voice + flash
+  socket.on('item-not-received', ({ tableNumber, itemName, sessionId, isBasic }) => {
+    io.to('admin-room').emit('item-not-received', { tableNumber, itemName, sessionId, isBasic });
+    // Voice alert to admin
+    io.to('admin-room').emit('voice-notify-admin', {
+      text: `तातडी! टेबल ${tableNumber} वरून "${itemName}" मिळाली नाही. लगेच पाठवा.`,
+      type: 'notreceived'
+    });
   });
+
+  // New order notify admin
+  socket.on('notify-admin-order', ({ tableNumber, orderType, count }) => {
+    const text = orderType === 'basic'
+      ? `टेबल ${tableNumber} वरून ${count} वस्तूंची मागणी आली आहे`
+      : `टेबल ${tableNumber} वरून ऑर्डर आली आहे`;
+    io.to('admin-room').emit('voice-notify-admin', { text, type: 'info', tableNumber });
+  });
+
+  // New seating request notify admin
+  socket.on('notify-admin-request', ({ tableNumber, customerName }) => {
+    io.to('admin-room').emit('voice-notify-admin', {
+      text: `टेबल ${tableNumber} वरून ${customerName} यांची बसण्याची विनंती आली आहे`,
+      type: 'info', tableNumber, customerName
+    });
+  });
+
+  // Item received
+  socket.on("item-status-update", ({ tableNumber, orderId, itemIndex, status, isBasic, itemName }) => {
+    io.to(`table-${tableNumber}`).emit("item-status-update", { orderId, itemIndex, status, isBasic, itemName });
+  });
+
+  socket.on("item-received", ({ orderId, itemIndex, isBasic, tableNumber, itemName }) => {
+    io.to('admin-room').emit('item-received', { orderId, itemIndex, isBasic, tableNumber, itemName });
+  });
+
+  socket.on('order-update', (data) => { io.to('admin-room').emit('order-update', data); });
+
+  socket.on('disconnect', () => console.log('Disconnected:', socket.id));
 });
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/hotel-pahunchar';
+mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB error:', err.message));
 
 const PORT = process.env.PORT || 5000;
-
-server.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`Frontend URL: ${CLIENT_URL}`);
-});
+server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
